@@ -1,0 +1,24 @@
+{
+  "name": "@agbrowser/mcp",
+  "version": "0.1.0",
+  "description": "agbrowser MCP server: agent-first browser control over Chrome/Edge with ad blocking and cross-account tab sync",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/server.js",
+  "bin": {
+    "agb-mcp": "./src/server.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@agbrowser/core": "0.1.0"
+  },
+  "exports": {
+    ".": "./src/server.js",
+    "./installer": "./src/installer.js",
+    "./runtime": "./src/runtime.js",
+    "./protocol": "./src/protocol.js",
+    "./tools": "./src/tools.js"
+  }
+}

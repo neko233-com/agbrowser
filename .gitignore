@@ -1,0 +1,22 @@
+node_modules/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Local databases and browser profiles created at runtime
+*.db
+*.db-wal
+*.db-shm
+agbrowser-data/
+profiles/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+desktop.ini

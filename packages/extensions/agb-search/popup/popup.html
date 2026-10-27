@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: dark; }
+  body { width: 320px; margin:0; padding:14px; background:#16181d; color:#e6e8ec;
+         font:13px/1.5 -apple-system,"Segoe UI",system-ui,sans-serif; }
+  h1 { font-size:13px; margin:0 0 10px; font-weight:600; }
+  input { width:100%; box-sizing:border-box; padding:7px 9px; border-radius:6px;
+          border:1px solid #2c313b; background:#1e2128; color:#e6e8ec; font-size:13px; }
+  input:focus { outline:none; border-color:#3b82f6; }
+  .sec { margin-top:12px; font-size:11px; color:#6b7484; text-transform:uppercase; letter-spacing:.6px; }
+  .item { padding:6px 0; border-bottom:1px solid #262a32; cursor:pointer; }
+  .item:hover .t { color:#60a5fa; }
+  .t { font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .u { font-size:11px; color:#6b7484; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .empty { color:#6b7484; font-size:12px; padding:6px 0; }
+  .hint { margin-top:10px; font-size:11px; color:#6b7484; }
+  kbd { background:#262a32; border-radius:3px; padding:1px 4px; font-size:10px; }
+</style>
+</head>
+<body>
+  <h1>agb Search</h1>
+  <input id="q" placeholder="搜索历史 / 书签 / 网页…" autocomplete="off">
+  <div class="sec">历史记录</div>
+  <div id="hist"></div>
+  <div class="sec">书签</div>
+  <div id="bm"></div>
+  <div class="hint">前缀直达：<kbd>g</kbd> <kbd>b</kbd> <kbd>ddg</kbd> <kbd>bd</kbd> <kbd>zh</kbd> <kbd>gh</kbd> <kbd>bili</kbd></div>
+<script src="popup.js"></script>
+</body>
+</html>

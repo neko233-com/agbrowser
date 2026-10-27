@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "agb Search — 聚合搜索",
+  "version": "0.1.0",
+  "description": "多引擎聚合搜索：地址栏关键词直达、快捷前缀（如 g: / gh: / b: / d:）、历史与书签快速跳转。",
+  "permissions": ["storage", "search", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "omnibox": {
+    "keyword": "agb"
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "agb Search",
+    "default_popup": "popup/popup.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

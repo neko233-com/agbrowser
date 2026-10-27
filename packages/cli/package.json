@@ -1,0 +1,17 @@
+{
+  "name": "@agbrowser/cli",
+  "version": "0.1.0",
+  "description": "agbrowser command line: install MCP into AI clients, launch browsers, manage accounts and tab sync",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "agb": "./bin/agb.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@agbrowser/core": "0.1.0",
+    "@agbrowser/mcp": "0.1.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "agb Speed — 测速与性能分析",
+  "version": "0.1.0",
+  "description": "网络测速（下行/上行/延迟/抖动）与页面性能分析（FCP/LCP/CLS/资源体积）。",
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "agb Speed",
+    "default_popup": "popup/popup.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

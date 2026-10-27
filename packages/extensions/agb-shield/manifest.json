@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "agb Shield — 广告与追踪隔离",
+  "version": "0.1.0",
+  "description": "元素级广告/追踪器隔离、第三方 cookie 收敛、指纹降噪。补充内核级网络拦截。",
+  "permissions": ["storage", "declarativeNetRequest", "declarativeNetRequestWithHostAccess", "scripting", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/cosmetic.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_title": "agb Shield",
+    "default_popup": "popup/popup.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

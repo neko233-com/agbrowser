@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: dark; }
+  body {
+    width: 320px; margin: 0; padding: 14px;
+    font: 13px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #16181d; color: #e6e8ec;
+  }
+  h1 { font-size: 13px; margin: 0 0 10px; font-weight: 600; letter-spacing: .3px; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #262a32; }
+  .row:last-child { border-bottom: 0; }
+  .label { color: #9aa3b2; }
+  .value { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .big { font-size: 22px; font-weight: 700; margin: 4px 0 10px; }
+  .unit { font-size: 11px; color: #9aa3b2; font-weight: 400; margin-left: 3px; }
+  .bar { height: 6px; border-radius: 3px; background: #262a32; overflow: hidden; margin-top: 3px; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg,#3b82f6,#22d3ee); }
+  button {
+    width: 100%; margin-top: 12px; padding: 8px; border: 0; border-radius: 6px;
+    background: #3b82f6; color: #fff; font-weight: 600; cursor: pointer; font-size: 13px;
+  }
+  button:hover { background: #2f6fd0; }
+  .muted { color: #6b7484; font-size: 11px; margin-top: 8px; }
+  .err { color: #f87171; }
+</style>
+</head>
+<body>
+  <h1>agb Speed</h1>
+  <div id="main"><div class="muted">点击下方按钮开始测速…</div></div>
+  <button id="run">开始测速</button>
+  <div id="foot" class="muted"></div>
+<script src="speed.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmtBytes = (b) => {
+  if (!b) return '0 B';
+  const u = ['B','KB','MB','GB'];
+  const i = Math.min(Math.floor(Math.log(b) / Math.log(1024)), u.length - 1);
+  return (b / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + ' ' + u[i];
+};
+const fmtMs = (ms) => ms >= 1000 ? (ms/1000).toFixed(2) + ' s' : Math.round(ms) + ' ms';
+
+function renderNetwork(net) {
+  if (!net) return '';
+  const max = Math.max(net.downloadMbps || 0, 100);
+  return `
+    <div class="big">${net.downloadMbps ?? 0}<span class="unit">Mbps 下行</span></div>
+    <div class="row"><span class="label">上行</span><span class="value">${net.uploadMbps ?? 0} Mbps</span></div>
+    <div class="row"><span class="label">延迟</span><span class="value">${fmtMs(net.latencyMs || 0)}</span></div>
+    <div class="row"><span class="label">抖动</span><span class="value">${fmtMs(net.jitterMs || 0)}</span></div>
+    <div class="row"><span class="label">评级</span><span class="value">${net.quality ?? 'n/a'}</span></div>
+    <div class="bar"><i style="width:${Math.min(100, ((net.downloadMbps||0)/max)*100)}%"></i></div>`;
+}
+function renderPage(p) {
+  if (!p || p.error) return '';
+  return `
+    <div class="row" style="margin-top:10px"><span class="label">TTFB</span><span class="value">${fmtMs(p.ttfb||0)}</span></div>
+    <div class="row"><span class="label">FCP</span><span class="value">${fmtMs(p.fcp||0)}</span></div>
+    <div class="row"><span class="label">LCP</span><span class="value">${fmtMs(p.lcp||0)}</span></div>
+    <div class="row"><span class="label">CLS</span><span class="value">${p.cls ?? 0}</span></div>
+    <div class="row"><span class="label">传输体积</span><span class="value">${fmtBytes(p.totalBytes||0)}</span></div>
+    <div class="row"><span class="label">资源数</span><span class="value">${p.resourceCount||0}</span></div>
+    <div class="row"><span class="label">DOM 节点</span><span class="value">${p.domNodes||0}</span></div>`;
+}
+
+async function run() {
+  $('run').disabled = true;
+  $('main').innerHTML = '<div class="muted">测速中，约需 10-20 秒…</div>';
+  const res = await chrome.runtime.sendMessage({ type: 'agb:speed:run' });
+  if (!res?.ok) {
+    $('main').innerHTML = `<div class="err">测速失败：${res?.error ?? '未知错误'}</div>`;
+    $('run').disabled = false;
+    return;
+  }
+  const r = res.result;
+  $('main').innerHTML = renderNetwork(r.network) + renderPage(r.page);
+  $('foot').textContent = r.network?.error ? `注意：${r.network.error}` : `耗时 ${(r.elapsedMs/1000).toFixed(1)}s`;
+  $('run').disabled = false;
+}
+$('run').addEventListener('click', run);
+run();
+</script>
+</body>
+</html>

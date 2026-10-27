@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>agbrowser 控制台</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1115;
+    --panel: #16191f;
+    --panel2: #1c2029;
+    --border: #262b35;
+    --text: #e6e8ec;
+    --muted: #8b93a1;
+    --accent: #3b82f6;
+    --accent2: #22d3ee;
+    --ok: #22c55e;
+    --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.55 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  header {
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(180deg, #171b22, #12151a);
+  }
+  .logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: grid; place-items: center; font-weight: 700; font-size: 15px; color: #04121f;
+  }
+  h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  .sub { color: var(--muted); font-size: 12px; margin-left: auto; font-variant-numeric: tabular-nums; }
+  main { padding: 24px; max-width: 1180px; margin: 0 auto; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .card h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .9px;
+    color: var(--muted); margin: 0 0 12px; font-weight: 600;
+  }
+  .chan { margin-bottom: 14px; }
+  .chan:last-child { margin-bottom: 0; }
+  .chan-title { font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
+  .dot.off { background: var(--muted); }
+  .acct {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 6px 10px; border-radius: 7px; background: var(--panel2);
+    margin-bottom: 5px; font-size: 13px;
+  }
+  .acct .id { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; }
+  .acct .meta { color: var(--muted); font-size: 12px; text-align: right; }
+  .kv { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+  .kv + .kv { border-top: 1px solid var(--border); }
+  .kv .k { color: var(--muted); }
+  .kv .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tag {
+    display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px;
+    background: rgba(59,130,246,.15); color: #93c5fd; border: 1px solid rgba(59,130,246,.3);
+  }
+  .tag.ok { background: rgba(34,197,94,.14); color:#86efac; border-color:rgba(34,197,94,.3); }
+  .tag.warn { background: rgba(245,158,11,.14); color:#fcd34d; border-color:rgba(245,158,11,.3); }
+  code { font-family: ui-monospace,"Cascadia Code",Consolas,monospace; font-size: 12px; }
+  .hint { color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+  .hint code { background: var(--panel2); padding: 1px 6px; border-radius: 4px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">A</div>
+  <h1>agbrowser 控制台</h1>
+  <div class="sub" id="sub">加载中…</div>
+</header>
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2>浏览器渠道与账号</h2>
+      <div id="channels"><div class="empty">读取中…</div></div>
+    </section>
+
+    <section class="card">
+      <h2>广告拦截</h2>
+      <div id="adblock"><div class="empty">读取中…</div></div>
+    </section>
+
+    <section class="card">
+      <h2>运行时</h2>
+      <div id="runtime"><div class="empty">读取中…</div></div>
+    </section>
+
+    <section class="card">
+      <h2>快速开始</h2>
+      <div class="hint">
+        <p style="margin:0 0 8px">把 agbrowser 装进你的 AI 客户端：</p>
+        <p style="margin:0 0 8px"><code>agb install</code></p>
+        <p style="margin:0 0 8px">单独启动一个会话：</p>
+        <p style="margin:0 0 8px"><code>agb launch --account chrome/Default</code></p>
+        <p style="margin:0">查看环境体检结果：</p>
+        <p style="margin:0"><code>agb doctor</code></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>标签同步</h2>
+      <div class="hint">
+        <p style="margin:0 0 8px">Chrome 与 Edge 的账号可以互相同步标签页：</p>
+        <p style="margin:0 0 8px"><code>agb sync add chrome/Default edge/Default</code></p>
+        <p style="margin:0">同步规则也可以由 MCP 工具 <code>browser_sync_add</code> 创建。</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>说明</h2>
+      <div class="hint">
+        <p style="margin:0 0 8px">agbrowser 直接接管浏览器原生用户数据目录，因此密码管理器、收藏夹与厂商账号同步全部由内核原生完成，不做任何数据搬运或解密。</p>
+        <p style="margin:0">标签栏默认使用浏览器原生左侧纵向模式。</p>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function load() {
+  let data;
+  try {
+    const res = await fetch('/api/status');
+    data = await res.json();
+  } catch (e) {
+    document.getElementById('sub').textContent = '连接失败';
+    return;
+  }
+
+  document.getElementById('sub').textContent =
+    `Node ${data.node} · ${data.platform}`;
+
+  // channels
+  const ch = document.getElementById('channels');
+  if (!data.channels?.length) {
+    ch.innerHTML = '<div class="empty">未检测到 Chrome 或 Edge</div>';
+  } else {
+    ch.innerHTML = data.channels.map(c => `
+      <div class="chan">
+        <div class="chan-title"><span class="dot"></span>${esc(c.label)}
+          <span class="tag">${esc(c.id)}</span></div>
+        ${c.accounts.map(a => `
+          <div class="acct">
+            <span class="id">${esc(a.id)}</span>
+            <span class="meta">${esc(a.name)}${a.email ? ' · '+esc(a.email) : ''}</span>
+          </div>`).join('') || '<div class="empty">无账号</div>'}
+      </div>`).join('');
+  }
+
+  // adblock
+  const ab = data.adblock ?? {};
+  document.getElementById('adblock').innerHTML = `
+    <div class="kv"><span class="k">状态</span><span class="v">${ab.enabled
+      ? '<span class="tag ok">已启用</span>' : '<span class="tag warn">已禁用</span>'}</span></div>
+    <div class="kv"><span class="k">规则总数</span><span class="v">${ab.ruleCount ?? 0}</span></div>
+    <div class="kv"><span class="k">原生拦截模式</span><span class="v">${ab.nativePatterns ?? 0}</span></div>
+    <div class="kv"><span class="k">已拦截请求</span><span class="v">${ab.blocked ?? 0}</span></div>
+    <div class="kv"><span class="k">元素隐藏规则</span><span class="v">${ab.cosmeticApplied ?? 0}</span></div>
+    <div class="kv"><span class="k">深度拦截</span><span class="v">${ab.requiresFetch
+      ? '<span class="tag warn">启用</span>' : '<span class="tag ok">原生层即可</span>'}</span></div>`;
+
+  // runtime
+  document.getElementById('runtime').innerHTML = `
+    <div class="kv"><span class="k">内核</span><span class="v">Chromium</span></div>
+    <div class="kv"><span class="k">纵向标签</span><span class="v"><span class="tag ok">默认开启</span></span></div>
+    <div class="kv"><span class="k">扩展包</span><span class="v">3 个内置插件</span></div>
+    <div class="kv"><span class="k">运行时依赖</span><span class="v">0</span></div>`;
+}
+
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>

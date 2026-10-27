@@ -1,0 +1,45 @@
+{
+  "name": "agbrowser",
+  "version": "0.1.0",
+  "description": "Agent-first Chromium browser runtime: ad-free, multi-account, cross-channel tab sync, MCP-native",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "packages/mcp",
+    "packages/cli",
+    "packages/console"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "npm run test:unit && npm run test:e2e && npm run test:ext",
+    "test:unit": "node --test --test-reporter=spec packages/core/test/rules.test.mjs packages/core/test/sync.test.mjs packages/mcp/test/mcp.test.mjs",
+    "test:e2e": "node packages/core/test/e2e.test.mjs",
+    "test:ext": "node packages/core/test/extensions.test.mjs",
+    "icons": "node scripts/gen-icons.mjs",
+    "doctor": "node packages/cli/bin/agb.js doctor",
+    "install:mcp": "node packages/cli/bin/agb.js install",
+    "postinstall": "node scripts/gen-icons.mjs"
+  },
+  "keywords": [
+    "agent",
+    "browser",
+    "mcp",
+    "chromium",
+    "chrome",
+    "edge",
+    "adblock",
+    "automation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neko233-com/agbrowser.git"
+  },
+  "homepage": "https://github.com/neko233-com/agbrowser#readme",
+  "bugs": {
+    "url": "https://github.com/neko233-com/agbrowser/issues"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@agbrowser/console",
+  "version": "0.1.0",
+  "description": "agbrowser local control panel: channels, accounts, tab sync, ad-blocking stats",
+  "license": "MIT",
+  "type": "module",
+  "main": "./server.js",
+  "exports": {
+    ".": "./server.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@agbrowser/core": "0.1.0"
+  }
+}
