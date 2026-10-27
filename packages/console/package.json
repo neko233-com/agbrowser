@@ -6,7 +6,8 @@
   "type": "module",
   "main": "./server.js",
   "exports": {
-    ".": "./server.js"
+    ".": "./server.js",
+    "./server": "./server.js"
   },
   "engines": {
     "node": ">=24.0.0"
