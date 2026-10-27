@@ -124,9 +124,16 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
     throw new Error(`Launcher not found: ${command}`);
   }
 
+  // Windows registry values must use backslashes. A path written with
+  // forward slashes is stored verbatim and makes the shell fail to launch
+  // the handler, so it is normalised here.
+  const winPath = process.platform === 'win32'
+    ? command.replace(/\//g, '\\')
+    : command;
+
   const classesRoot = 'HKCU\\Software\\Classes';
   const progRoot = `${classesRoot}\\${PROG_ID}`;
-  const cmdValue = `"${command}" --single-argument %1`;
+  const cmdValue = `"${winPath}" --single-argument %1`;
 
   reg(['add', progRoot, '/f']);
   reg(['add', `${progRoot}\\shell\\open\\command`, '/ve', '/t', 'REG_SZ', '/d', cmdValue, '/f']);
@@ -141,7 +148,7 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
   const appRoot = `${classesRoot}\\Applications\\agbrowser.exe`;
   reg(['add', appRoot, '/f']);
   reg(['add', `${appRoot}\\shell\\open\\command`, '/ve', '/t', 'REG_SZ', '/d', cmdValue, '/f']);
-  reg(['add', appRoot, '/v', 'Path', '/t', 'REG_SZ', '/d', command, '/f']);
+  reg(['add', appRoot, '/v', 'Path', '/t', 'REG_SZ', '/d', winPath, '/f']);
 
   // Declare which types the app handles.
   const supported = SCHEMES.concat(['ftp', 'file']);
@@ -165,7 +172,7 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
     reg(['add', `${caps}\\URLAssociations\\${scheme}`, '/ve', '/t', 'REG_SZ', '/d', PROG_ID, '/f']);
   }
 
-  return { progId: PROG_ID, command };
+  return { progId: PROG_ID, command: winPath };
 }
 
 /**
