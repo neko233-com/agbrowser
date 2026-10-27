@@ -15,15 +15,17 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "test": "npm run test:unit && npm run test:e2e && npm run test:ext && npm run test:acceptance",
-    "test:unit": "node --test --test-reporter=spec packages/core/test/rules.test.mjs packages/core/test/sync.test.mjs packages/core/test/managedprofile.test.mjs packages/mcp/test/mcp.test.mjs",
+    "test": "npm run test:unit && npm run test:e2e && npm run test:ext && npm run test:game && npm run test:acceptance",
+    "test:unit": "node --test --test-reporter=spec packages/core/test/rules.test.mjs packages/core/test/sync.test.mjs packages/core/test/managedprofile.test.mjs packages/core/test/launcher.test.mjs packages/mcp/test/mcp.test.mjs",
     "test:e2e": "node packages/core/test/e2e.test.mjs",
     "test:ext": "node packages/core/test/extensions.test.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "doctor": "node packages/cli/bin/agb.js doctor",
     "install:mcp": "node packages/cli/bin/agb.js install",
     "postinstall": "node scripts/gen-icons.mjs",
-    "test:acceptance": "node packages/mcp/test/acceptance.test.mjs"
+    "test:acceptance": "node packages/mcp/test/acceptance.test.mjs",
+    "test:game": "node packages/core/test/game.test.mjs",
+    "test:msi": "node packaging/validate-msi.mjs"
   },
   "keywords": [
     "agent",

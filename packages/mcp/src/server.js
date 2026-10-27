@@ -10,23 +10,22 @@
  *   AGB_DATA_DIR=<path>   where to keep the local store
  *   AGB_EXTENSIONS=1      load the built-in extension pack
  */
-import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 
 import { Runtime } from './runtime.js';
 import { createServer } from './tools.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 /** Locate the built-in extension pack relative to this file. */
 function findExtensionPack() {
   const candidates = [
     // Repo checkout: packages/mcp/src -> packages/extensions
-    resolve(__dirname, '..', '..', 'extensions'),
+    resolve(here, '..', '..', 'extensions'),
     // Installed layout: node_modules/@agbrowser/mcp/src -> sibling package
-    resolve(__dirname, '..', '..', '..', '@agbrowser', 'extensions'),
-    resolve(__dirname, '..', 'extensions'),
+    resolve(here, '..', '..', '..', '@agbrowser', 'extensions'),
+    resolve(here, '..', 'extensions'),
   ];
   for (const dir of candidates) {
     if (existsSync(dir)) {

@@ -52,6 +52,14 @@ npm run doctor          # 环境体检
 npm run install:mcp     # 一键装进所有检测到的 AI 客户端
 ```
 
+Windows 用户也可以直接下载安装包：
+
+```
+https://github.com/neko233-com/agbrowser/releases/latest/download/agbrowser-0.1.0-x86.msi
+```
+
+安装包只有 **1.25 MB**——因为它只装原生启动器与图标，浏览器内核用的就是你机器上已有的 Chrome / Edge，Agent 运行时是纯 JavaScript，按需从仓库解析。
+
 `agb install` 会自动写入这些客户端的原生配置格式：
 
 `codex` · `claude` · `claudeDesktop` · `workbuddy` · `trae` · `cursor` · `windsurf` · `gemini` · `vscode` · `opencode` · `zed` · `continue`
@@ -125,7 +133,24 @@ agb sync run chrome/Default edge/Default   # 立即推送当前所有标签
 | **agb Speed** | 网络测速（延迟/抖动/上行/下行）+ 页面性能（FCP/LCP/CLS/TTFB/资源体积） |
 | **agb Search** | 多引擎聚合搜索，`g:` `b:` `ddg:` `bd:` `zh:` `gh:` `bili:` 前缀直达，历史/书签聚合搜索 |
 
-### 6. 默认左侧纵向标签栏
+### 6. Web 游戏开发：一等公民支持
+
+Canvas 游戏在无障碍树里是**完全隐形**的——没有按钮、没有文本、没有角色。Agent 能接触的只有像素、帧循环，以及游戏自己挂在全局对象上的状态。agbrowser 为此提供了一整套原语：
+
+| MCP 工具 | 作用 |
+| --- | --- |
+| `browser_game_detect` | 识别游戏类型：Canvas 2D / WebGL / WebGPU，以及引擎（Phaser、Three.js、PixiJS、p5、Kaboom、Crafty），并报告画布尺寸、渲染上下文、GPU 渲染器字符串 |
+| `browser_game_state` | 读出游戏实时状态：帧率、实体集合、玩家位置等；也可传入任意表达式读取游戏内部数据 |
+| `browser_game_control` | 控制帧循环：`pause` 暂停、`step` 逐帧推进、`resume` 恢复、`status` 查状态、`reset` 重置统计 |
+| `browser_game_input` | 向游戏注入指针与键盘输入。指针事件带真实坐标，键盘可重复（移动类操作） |
+| `browser_game_probe` | 采样画布区域亮度，判断游戏是否真的在渲染（崩溃后是否黑屏） |
+| `browser_perf_profile` | 页面性能剖析：TTFB、FCP、资源体积分类、最重的请求、JS 堆内存 |
+
+**帧步进**是调试游戏的关键能力。暂停时游戏会收到**冻结的时间戳**，所以世界不会推进，但它的 rAF 链保持完整——恢复后从原处继续。这让「逐帧定位卡死的那一帧」成为可能。
+
+实测（真实 canvas 游戏，21 项检查全通过）：暂停后帧数精确不变；`step(3)` 恰好推进 3 帧；恢复后继续运行；指针坐标精确到像素；键盘事件正确抵达游戏。
+
+### 7. 默认左侧纵向标签栏
 
 Chrome 145+ 与 Edge 均原生支持纵向标签。agbrowser 会在启动前写入 profile 偏好：
 
@@ -150,6 +175,35 @@ agb sync list|add|run       标签同步规则管理
 agb mcp                     以 stdio 运行 MCP 服务
 agb console                 本地控制面板
 agb default status|register|set|restore
+```
+
+## 安装包
+
+Windows 安装包由 WiX 7 构建，x86 架构（可安装到 32 位与 64 位 Windows）：
+
+```bash
+node packaging/build-msi.mjs   # -> build/agbrowser-<version>-x86.msi
+node packaging/validate-msi.mjs
+```
+
+MSI 内含：原生启动器（Go，2.9 MB，零运行时依赖）、应用图标、开始菜单快捷方式、ProgID 与 http/https 关联注册。
+
+**本仓库不使用 GitHub Actions**：构建与发布全部手动完成，避免任何 runner 执行来自 PR 的代码。发布流程见 `.github/workflows/README.md`。
+
+## 品牌图标
+
+图标是全新设计的，不沿用任何现有浏览器：
+
+<p align="center">
+  <img src="packages/launcher/assets/icon-256.png" width="128" alt="agbrowser">
+</p>
+
+标识是一个**开口轨道 + 轨道上的 agent 节点 + 中心核**——象征由 Agent 驱动的浏览器，与 Chrome 的三色圆环完全不同。图形由 Go 程序按解析式绘制，4 倍超采样抗锯齿，从 16px favicon 到 512px 应用图标都保持清晰。三个内置扩展各有自己的配色。
+
+重新生成：
+
+```bash
+cd packages/launcher && go run ./icon .
 ```
 
 ---

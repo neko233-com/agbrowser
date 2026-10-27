@@ -13,6 +13,7 @@ import { prepareProfile } from '@agbrowser/core/browser/profile';
 import { resolveLaunchUserDataDir } from '@agbrowser/core/browser/managedprofile';
 import { installHardening } from '@agbrowser/core/browser/hardening';
 import { PageController } from '@agbrowser/core/snapshot/page';
+import { GameController } from '@agbrowser/core/snapshot/game';
 import { AdBlocker } from '@agbrowser/core/block/adblock';
 import { RuleSet } from '@agbrowser/core/block/rules';
 import { DEFAULT_FILTERS } from '@agbrowser/core/block/filters';
@@ -247,6 +248,25 @@ export class Runtime extends EventEmitter {
 
   setActiveTarget(targetId) {
     this._activeTargetId = targetId;
+  }
+
+  /**
+   * Get the game controller for the active page.
+   *
+   * The harness is installed into the page before every navigation so that
+   * it is present from the first frame, which matters for games that read
+   * their state during load.
+   */
+  async getGame() {
+    const page = await this.getPage();
+    if (!this._game) {
+      this._game = new GameController({ page });
+    }
+    // Keep the controller bound to the current page.
+    if (this._game.page !== page) {
+      this._game = new GameController({ page });
+    }
+    return this._game;
   }
 
   activeTargetIndex() {

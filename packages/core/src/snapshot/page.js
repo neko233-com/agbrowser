@@ -507,6 +507,9 @@ const KEY_CODES = {
   Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46,
   ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39,
   Home: 36, End: 35, PageUp: 33, PageDown: 34, Space: 32,
+  Shift: 16, Control: 17, Alt: 18, Meta: 91, CapsLock: 20,
+  F1: 112, F2: 113, F3: 114, F4: 115, F5: 116, F6: 117,
+  F7: 118, F8: 119, F9: 120, F10: 121, F11: 122, F12: 123,
 };
 
 const MODIFIERS = { Alt: 1, Control: 2, Ctrl: 2, Meta: 4, Command: 4, Cmd: 4, Shift: 8 };
@@ -517,11 +520,22 @@ function parseKey(spec) {
   let modifiers = 0;
   for (const mod of parts) modifiers |= MODIFIERS[mod] ?? 0;
 
-  const named = KEY_CODES[key] ?? key.toUpperCase().charCodeAt(0);
-  const code = key.length === 1 ? `Key${key.toUpperCase()}` : key;
+  // Named keys have a fixed virtual code; single characters use the code of
+  // the character itself. The space bar is the common special case.
+  let keyCode;
+  if (key === ' ') keyCode = 32;
+  else if (KEY_CODES[key] !== undefined) keyCode = KEY_CODES[key];
+  else if (key.length === 1) keyCode = key.toUpperCase().charCodeAt(0);
+  else keyCode = key.toUpperCase().charCodeAt(0) || 0;
+
+  const code = key === ' ' ? 'Space'
+    : key.length === 1 ? `Key${key.toUpperCase()}`
+      : key;
+
+  // Printable characters carry text; named keys do not.
   const text = key.length === 1 ? key : undefined;
 
-  return { modifiers, keyCode: named, code, text };
+  return { modifiers, keyCode, code, text };
 }
 
 function truncate(str, max) {

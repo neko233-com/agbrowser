@@ -5,6 +5,10 @@ node_modules/
 .env.*
 !.env.example
 
+# Build output
+build/
+packages/launcher/agbrowser.exe
+
 # Local databases and browser profiles created at runtime
 *.db
 *.db-wal

@@ -13,10 +13,8 @@
  *   agb mcp                   run the MCP server on stdio
  *   agb console               open the local control panel
  */
-import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 
 import {
   installToClient,
@@ -25,7 +23,7 @@ import {
   CLIENTS,
 } from '@agbrowser/mcp/installer';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const C = {
   reset: '\x1b[0m',
@@ -46,7 +44,7 @@ const info = (m) => console.log(`${C.dim}  ${m}${C.reset}`);
 
 /** Resolve the MCP server entry point and the node binary to run it with. */
 function serverEntry() {
-  const serverPath = resolve(__dirname, '..', '..', 'mcp', 'src', 'server.js');
+  const serverPath = resolve(here, '..', '..', 'mcp', 'src', 'server.js');
   if (!existsSync(serverPath)) {
     throw new Error(`MCP server not found at ${serverPath}`);
   }
@@ -182,7 +180,7 @@ async function cmdDoctor() {
   }
 
   // Extension pack
-  const extRoot = resolve(__dirname, '..', '..', 'extensions');
+  const extRoot = resolve(here, '..', '..', 'extensions');
   if (existsSync(extRoot)) {
     ok('Built-in extension pack found');
     info(extRoot);

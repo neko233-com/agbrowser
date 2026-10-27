@@ -178,7 +178,6 @@ export async function installHardening(session) {
   await connection.trySend('Page.addScriptToEvaluateOnNewDocument', {
     source: HARDENING_SCRIPT,
     runImmediately: true,
-    worldName: 'MAIN',
   });
 
   // Also inject into targets that get attached later.
@@ -188,7 +187,6 @@ export async function installHardening(session) {
     await connection.trySend('Page.addScriptToEvaluateOnNewDocument', {
       source: HARDENING_SCRIPT,
       runImmediately: true,
-      worldName: 'MAIN',
     }, sessionId);
   });
 
@@ -204,7 +202,6 @@ export async function installHardening(session) {
       await connection.trySend('Page.addScriptToEvaluateOnNewDocument', {
         source: HARDENING_SCRIPT,
         runImmediately: true,
-        worldName: 'MAIN',
       }, sessionId);
       await connection.trySend('Runtime.evaluate', {
         expression: HARDENING_SCRIPT,

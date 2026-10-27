@@ -443,6 +443,152 @@ export function createServer(runtime) {
     },
   });
 
+  // -- games ----------------------------------------------------------------
+
+  server.tool({
+    name: 'browser_game_detect',
+    description: 'Detect whether the page hosts a web game and what it runs on: Canvas 2D, WebGL, WebGPU, and which engine (Phaser, Three.js, PixiJS, p5, Kaboom, Crafty). Reports canvas sizes, render context, renderer string and the game-like globals it can see.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: async () => {
+      const game = await runtime.getGame();
+      const info = await game.detect();
+      return { content: [{ type: 'text', text: JSON.stringify(info, null, 2) }] };
+    },
+  });
+
+  server.tool({
+    name: 'browser_game_state',
+    description: 'Read the live state of a web game: frame rate statistics, entity collections and the numeric/string fields of the game objects it keeps on the window. Pass an expression to read anything the game exposes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        expression: { type: 'string', description: 'JS expression evaluated in the page; its value is returned as JSON' },
+      },
+    },
+    handler: async ({ expression = null }) => {
+      const game = await runtime.getGame();
+      const state = await game.state(expression);
+      return { content: [{ type: 'text', text: JSON.stringify(state, null, 2) }] };
+    },
+  });
+
+  server.tool({
+    name: 'browser_game_control',
+    description: 'Control the game frame loop: pause it, resume it, or advance it a fixed number of frames while paused. Stepping frame by frame is how you pin down the exact moment a game goes wrong.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['pause', 'resume', 'step', 'status', 'reset'], description: 'Operation' },
+        frames: { type: 'number', description: 'Number of frames to advance (action=step)' },
+      },
+    },
+    handler: async ({ action = 'status', frames = 1 }) => {
+      const game = await runtime.getGame();
+      let result;
+      switch (action) {
+        case 'pause': result = await game.pause(); break;
+        case 'resume': result = await game.resume(); break;
+        case 'step': result = await game.step(frames); break;
+        case 'reset': result = await game.resetStats(); break;
+        default: result = { paused: await game._call('isPaused') };
+      }
+      const stats = await game.fps();
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ action, result, fps: stats }, null, 2),
+        }],
+      };
+    },
+  });
+
+  server.tool({
+    name: 'browser_game_input',
+    description: 'Send pointer or keyboard input to a web game. Pointer events are dispatched at viewport coordinates so canvas games receive them, and keys can be repeated for movement.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['pointerdown', 'pointermove', 'pointerup', 'click'], description: 'Pointer event type' },
+        x: { type: 'number', description: 'Viewport X coordinate' },
+        y: { type: 'number', description: 'Viewport Y coordinate' },
+        button: { type: 'number', description: 'Mouse button (0 = left)' },
+        key: { type: 'string', description: 'Key to press instead of a pointer event' },
+        repeat: { type: 'number', description: 'How many times to press the key' },
+      },
+    },
+    handler: async ({ type = 'click', x = 0, y = 0, button = 0, key = null, repeat = 1 }) => {
+      const game = await runtime.getGame();
+      const result = key
+        ? await game.key(key, { repeat })
+        : await game.pointer({ x, y, type, button });
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    },
+  });
+
+  server.tool({
+    name: 'browser_game_probe',
+    description: 'Sample a region of the game canvas and report its brightness, which tells you whether the game is actually rendering or has gone blank. Useful after a crash or a state change.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        x: { type: 'number', description: 'Region origin X in canvas pixels' },
+        y: { type: 'number', description: 'Region origin Y in canvas pixels' },
+        width: { type: 'number', description: 'Region width' },
+        height: { type: 'number', description: 'Region height' },
+      },
+    },
+    handler: async ({ x = 0, y = 0, width = 64, height = 64 }) => {
+      const game = await runtime.getGame();
+      const sample = await game.sample({ x, y, width, height });
+      return { content: [{ type: 'text', text: JSON.stringify(sample, null, 2) }] };
+    },
+  });
+
+  server.tool({
+    name: 'browser_perf_profile',
+    description: 'Profile the current page: navigation timings, paint timings, resource weights by type and the heaviest requests. Use it to find what is slowing a game or a heavy page down.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: async () => {
+      const page = await runtime.getPage();
+      const profile = await page.evaluate(`(() => {
+        const nav = performance.getEntriesByType('navigation')[0] || null;
+        const paints = Object.fromEntries(
+          performance.getEntriesByType('paint').map(p => [p.name, Math.round(p.startTime)]));
+        const resources = performance.getEntriesByType('resource');
+        const byType = {};
+        let bytes = 0;
+        for (const r of resources) {
+          const kind = r.initiatorType || 'other';
+          const size = r.transferSize || r.encodedBodySize || 0;
+          byType[kind] = (byType[kind] || 0) + size;
+          bytes += size;
+        }
+        const memory = performance.memory ? {
+          usedJSHeapSize: performance.memory.usedJSHeapSize,
+          totalJSHeapSize: performance.memory.totalJSHeapSize,
+        } : null;
+        return {
+          ttfb: nav ? Math.round(nav.responseStart - nav.requestStart) : 0,
+          domContentLoaded: nav ? Math.round(nav.domContentLoadedEventEnd - nav.startTime) : 0,
+          load: nav ? Math.round(nav.loadEventEnd - nav.startTime) : 0,
+          paints,
+          resourceCount: resources.length,
+          totalBytes: bytes,
+          byType,
+          domNodes: document.getElementsByTagName('*').length,
+          memory,
+          heaviest: resources
+            .slice().sort((a, b) => (b.transferSize || 0) - (a.transferSize || 0))
+            .slice(0, 10)
+            .map(r => ({ name: r.name, type: r.initiatorType,
+                         bytes: r.transferSize || r.encodedBodySize || 0,
+                         duration: Math.round(r.duration) })),
+        };
+      })()`);
+      return { content: [{ type: 'text', text: JSON.stringify(profile, null, 2) }] };
+    },
+  });
+
   // -- diagnostics ----------------------------------------------------------
 
   server.tool({

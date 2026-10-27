@@ -54,26 +54,27 @@ export class CdpConnection extends EventEmitter {
     const ws = new WebSocket(this.#url);
     this.#ws = ws;
 
-    await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new CdpError(`CDP connect timed out after ${timeout}ms`));
-        try {
-          ws.close();
-        } catch {
-          /* ignore */
-        }
-      }, timeout);
+    const { promise, resolve, reject } = Promise.withResolvers();
+    const timer = setTimeout(() => {
+      reject(new CdpError(`CDP connect timed out after ${timeout}ms`));
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+    }, timeout);
 
-      ws.addEventListener('open', () => {
-        clearTimeout(timer);
-        resolve();
-      }, { once: true });
+    ws.addEventListener('open', () => {
+      clearTimeout(timer);
+      resolve();
+    }, { once: true });
 
-      ws.addEventListener('error', (event) => {
-        clearTimeout(timer);
-        reject(new CdpError(`CDP socket error: ${event?.message ?? 'unknown'}`));
-      }, { once: true });
-    });
+    ws.addEventListener('error', (event) => {
+      clearTimeout(timer);
+      reject(new CdpError(`CDP socket error: ${event?.message ?? 'unknown'}`));
+    }, { once: true });
+
+    await promise;
 
     ws.addEventListener('message', this.#onMessageBound);
     ws.addEventListener('close', () => this.#onClose('socket closed'));
@@ -138,31 +139,33 @@ export class CdpConnection extends EventEmitter {
     const payload = { id, method, params };
     if (sessionId) payload.sessionId = sessionId;
 
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.#pending.delete(id);
-        reject(new CdpError(`CDP command timed out after ${timeout}ms: ${method}`));
-      }, timeout);
+    const { promise, resolve, reject } = Promise.withResolvers();
 
-      this.#pending.set(id, {
-        resolve: (v) => {
-          clearTimeout(timer);
-          resolve(v);
-        },
-        reject: (e) => {
-          clearTimeout(timer);
-          reject(e);
-        },
-      });
+    const timer = setTimeout(() => {
+      this.#pending.delete(id);
+      reject(new CdpError(`CDP command timed out after ${timeout}ms: ${method}`));
+    }, timeout);
 
-      try {
-        this.#ws.send(JSON.stringify(payload));
-      } catch (err) {
+    this.#pending.set(id, {
+      resolve: (v) => {
         clearTimeout(timer);
-        this.#pending.delete(id);
-        reject(new CdpError(`Failed to send ${method}: ${err.message}`));
-      }
+        resolve(v);
+      },
+      reject: (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
     });
+
+    try {
+      this.#ws.send(JSON.stringify(payload));
+    } catch (err) {
+      clearTimeout(timer);
+      this.#pending.delete(id);
+      reject(new CdpError(`Failed to send ${method}: ${err.message}`));
+    }
+
+    return promise;
   }
 
   /** Convenience: send and swallow protocol errors, used for best-effort enables. */
@@ -194,8 +197,8 @@ export class CdpConnection extends EventEmitter {
  * @param {string} port
  * @param {string} [host]
  */
-export async function discoverEndpoint(port, host = '127.0.0.1') {
-  const res = await fetch(`http://${host}:${port}/json/version`);
+export async function discoverEndpoint(port, host = '127.0.0.1', { signal } = {}) {
+  const res = await fetch(`http://${host}:${port}/json/version`, { signal });
   if (!res.ok) throw new CdpError(`DevTools endpoint returned HTTP ${res.status}`);
   return res.json();
 }
@@ -205,8 +208,11 @@ export async function waitForEndpoint(port, { host = '127.0.0.1', timeout = 30_0
   const deadline = Date.now() + timeout;
   let lastError = null;
   while (Date.now() < deadline) {
+    // The remaining budget bounds the request, so a stalled socket cannot
+    // outlive the wait.
+    const budget = Math.max(1, deadline - Date.now());
     try {
-      return await discoverEndpoint(port, host);
+      return await discoverEndpoint(port, host, { signal: AbortSignal.timeout(budget) });
     } catch (err) {
       lastError = err;
       await new Promise((r) => setTimeout(r, intervalMs));

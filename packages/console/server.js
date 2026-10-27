@@ -8,16 +8,14 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, join, extname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, extname } from 'node:path';
 
 import { detectChannels } from '@agbrowser/core/browser/channels';
 import { AdBlocker } from '@agbrowser/core/block/adblock';
 import { RuleSet } from '@agbrowser/core/block/rules';
 import { DEFAULT_FILTERS } from '@agbrowser/core/block/filters';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PUBLIC_DIR = join(__dirname, 'public');
+const PUBLIC_DIR = join(import.meta.dirname, 'public');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',

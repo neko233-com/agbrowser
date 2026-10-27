@@ -21,7 +21,8 @@
     "./sync/engine": "./src/sync/engine.js",
     "./browser/defaultbrowser": "./src/browser/defaultbrowser.js",
     "./cdp/connection": "./src/cdp/connection.js",
-    "./browser/managedprofile": "./src/browser/managedprofile.js"
+    "./browser/managedprofile": "./src/browser/managedprofile.js",
+    "./snapshot/game": "./src/snapshot/game.js"
   },
   "engines": {
     "node": ">=24.0.0"
