@@ -22,6 +22,22 @@
 
 代价是：agbrowser 不是一个新的浏览器二进制，而是一层**运行时 + 集成层**。这换来的是安装体积接近零、启动毫秒级、以及内核永远是最新的。
 
+### Chrome 136+ 的调试端口限制，以及 agbrowser 的应对
+
+Chrome 136 起，出于安全考虑，浏览器**拒绝在默认用户数据目录下开启远程调试端口**——否则任何本地进程都能通过调试端口读取浏览器里的全部 Cookie 与令牌。
+
+agbrowser 的应对是**接管而非绕过**：它为每个渠道建一个受管根目录，其中的 profile 项是指向真实 profile 的**目录联接（junction）**。
+
+```
+%LOCALAPPDATA%\agbrowser\channels\chrome\
+  Local State  ->  %LOCALAPPDATA%\Google\Chrome\User Data\Local State
+  Default\     ->  %LOCALAPPDATA%\Google\Chrome\User Data\Default
+```
+
+浏览器读写的仍是它自己原来那批文件，所以 Cookie、登录态、密码管理器、收藏夹、厂商同步全部照常工作。**没有任何数据被复制、导出或解密**，真实 profile 也不会被修改。
+
+实测（Edge 默认 profile）：`Bookmarks` 1.4 MB、`Login Data` 983 KB、`Preferences` 390 KB 全部原样可见。
+
 ---
 
 ## 快速开始
@@ -176,8 +192,10 @@ extensions/
 ## 开发
 
 ```bash
-npm test           # 单元 + 集成测试
+npm test           # 单元 + 集成 + 端到端 + 验收
+npm run test:unit  # 纯单元测试
 npm run test:e2e   # 真实浏览器端到端测试
+npm run test:ext   # 内置插件加载测试
 npm run icons      # 重新生成插件图标
 ```
 

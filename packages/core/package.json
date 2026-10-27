@@ -20,7 +20,8 @@
     "./store/store": "./src/store/store.js",
     "./sync/engine": "./src/sync/engine.js",
     "./browser/defaultbrowser": "./src/browser/defaultbrowser.js",
-    "./cdp/connection": "./src/cdp/connection.js"
+    "./cdp/connection": "./src/cdp/connection.js",
+    "./browser/managedprofile": "./src/browser/managedprofile.js"
   },
   "engines": {
     "node": ">=24.0.0"

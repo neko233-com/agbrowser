@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { detectChannels, listProfiles } from '@agbrowser/core/browser/channels';
 import { launchBrowser } from '@agbrowser/core/browser/launcher';
 import { prepareProfile } from '@agbrowser/core/browser/profile';
+import { resolveLaunchUserDataDir } from '@agbrowser/core/browser/managedprofile';
 import { installHardening } from '@agbrowser/core/browser/hardening';
 import { PageController } from '@agbrowser/core/snapshot/page';
 import { AdBlocker } from '@agbrowser/core/block/adblock';
@@ -121,6 +122,18 @@ export class Runtime extends EventEmitter {
     }
     const { channel, account } = this.resolveAccount(accountId);
 
+    // Chrome 136+ refuses to open a remote debugging port when the browser
+    // runs on its default user data directory. agbrowser therefore points the
+    // browser at a managed root whose profile entries are links to the real
+    // ones, so cookies, logins, the password manager and the vendor's sync
+    // all keep working untouched.
+    const managed = resolveLaunchUserDataDir({
+      channelId: channel.id,
+      requestedUserDataDir: channel.userDataDir,
+      profileDirs: channel.accounts.map((a) => a.id),
+      defaultUserDataDirs: [channel.userDataDir],
+    });
+
     // Prepare the native profile: enable the vertical tab strip in place.
     // The browser's own password manager, bookmarks and sync stay untouched.
     prepareProfile({
@@ -132,7 +145,7 @@ export class Runtime extends EventEmitter {
       binary: channel.binary,
       channelId: channel.id,
       accountId: account.id,
-      userDataDir: channel.userDataDir,
+      userDataDir: managed.userDataDir,
       headless: this.headless,
       loadExtensions: this.loadExtensions,
       extensionPaths: this.extensionPaths,
@@ -140,6 +153,9 @@ export class Runtime extends EventEmitter {
         '--disable-blink-features=AutomationControlled',
       ],
     });
+
+    session.managedProfile = managed.managed;
+    session.managedLinks = managed.links ?? [];
 
     await this.adblocker.attach(session);
     await installHardening(session);
