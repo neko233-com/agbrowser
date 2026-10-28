@@ -3,11 +3,12 @@
  * AI client would, and confirm the whole stack works end to end.
  */
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SERVER = join(__dirname, '..', '..', 'mcp', 'src', 'server.js');
+import { PROTOCOL_VERSION, META_KEYS } from '@agbrowser/mcp/protocol';
+
+const here = import.meta.dirname;
+const SERVER = join(here, '..', '..', 'mcp', 'src', 'server.js');
 
 const child = spawn(process.execPath, [SERVER], {
   stdio: ['pipe', 'pipe', 'pipe'],
@@ -32,11 +33,28 @@ child.stdout.on('data', (chunk) => {
 });
 
 let nextId = 0;
+/**
+ * Send a request the way a 2026-07-28 client does: the protocol version and
+ * the client identity travel in `params._meta`.
+ */
 const send = (method, params = {}) => new Promise((resolve, reject) => {
   const id = ++nextId;
   const timer = setTimeout(() => reject(new Error(`timeout: ${method}`)), 60_000);
   pending.push({ id, resolve: (m) => { clearTimeout(timer); resolve(m); } });
-  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+  const payload = {
+    jsonrpc: '2.0',
+    id,
+    method,
+    params: {
+      ...params,
+      _meta: {
+        [META_KEYS.PROTOCOL_VERSION]: PROTOCOL_VERSION,
+        [META_KEYS.CLIENT_INFO]: { name: 'acceptance', version: '1.0.0' },
+        [META_KEYS.CLIENT_CAPABILITIES]: {},
+      },
+    },
+  };
+  child.stdin.write(`${JSON.stringify(payload)}\n`);
 });
 
 const results = [];
@@ -46,19 +64,13 @@ const check = (name, pass, detail = '') => {
 };
 
 try {
-  const init = await send('initialize', {
-    protocolVersion: '2025-06-18',
-    capabilities: {},
-    clientInfo: { name: 'acceptance', version: '1.0.0' },
-  });
-  check('initialize handshake', init.result?.serverInfo?.name === 'agbrowser',
-    `protocol ${init.result?.protocolVersion}`);
-
-  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  const discover = await send('server/discover');
+  check('server/discover', discover.result?.supportedVersions?.includes(PROTOCOL_VERSION),
+    `protocol ${discover.result?.supportedVersions?.join(', ')}`);
 
   const tools = await send('tools/list');
   const names = tools.result.tools.map((t) => t.name);
-  check('tool catalogue', names.length >= 19, `${names.length} tools`);
+  check('tool catalogue', names.length >= 30, `${names.length} tools`);
 
   // A real browsing round trip against a local page.
   const http = await import('node:http');

@@ -45,6 +45,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_open',
+    title: "Open a URL",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":true},
     description: 'Open a URL in the browser and return a compact accessibility snapshot with clickable element references.',
     inputSchema: {
       type: 'object',
@@ -70,6 +72,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_snapshot',
+    title: "Snapshot the page",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Take a fresh accessibility snapshot of the current page. Use after navigation or a DOM change to get fresh element references.',
     inputSchema: {
       type: 'object',
@@ -90,6 +94,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_read',
+    title: "Read page text",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Read the visible text of the current page, optionally scoped to a CSS selector.',
     inputSchema: {
       type: 'object',
@@ -107,6 +113,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_extract',
+    title: "Evaluate JavaScript",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Evaluate a JavaScript expression in the page and return the result. Use for structured data extraction.',
     inputSchema: {
       type: 'object',
@@ -126,6 +134,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_click',
+    title: "Click an element",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":true},
     description: 'Click an element by reference from the latest snapshot (e.g. "@e3").',
     inputSchema: {
       type: 'object',
@@ -144,6 +154,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_fill',
+    title: "Fill a field",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Fill an input field by reference with the given text (clears existing value first).',
     inputSchema: {
       type: 'object',
@@ -162,6 +174,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_type',
+    title: "Type into a field",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Type text into an element without clearing it first (for typing into a field that already has content).',
     inputSchema: {
       type: 'object',
@@ -180,6 +194,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_press',
+    title: "Press a key",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Press a key or key combination, e.g. "Enter", "Tab", "Control+a", "ArrowDown".',
     inputSchema: {
       type: 'object',
@@ -197,6 +213,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_scroll',
+    title: "Scroll the page",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Scroll the page.',
     inputSchema: {
       type: 'object',
@@ -214,6 +232,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_hover',
+    title: "Hover an element",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Hover over an element by reference.',
     inputSchema: {
       type: 'object',
@@ -231,6 +251,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_wait',
+    title: "Wait for a condition",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Wait for a condition: a selector to appear, a text to be present, or a fixed delay.',
     inputSchema: {
       type: 'object',
@@ -267,6 +289,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_screenshot',
+    title: "Take a screenshot",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Capture a screenshot of the current page and return it as an image.',
     inputSchema: {
       type: 'object',
@@ -291,6 +315,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_back',
+    title: "Go back",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Go back in history.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -302,6 +328,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_forward',
+    title: "Go forward",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Go forward in history.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -313,6 +341,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_reload',
+    title: "Reload the page",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Reload the current page.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -326,6 +356,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_tabs',
+    title: "Manage tabs",
+    annotations: {"readOnlyHint":false,"destructiveHint":true,"idempotentHint":false,"openWorldHint":false},
     description: 'List open tabs, or open/close/switch between them.',
     inputSchema: {
       type: 'object',
@@ -362,6 +394,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_accounts',
+    title: "List accounts",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'List browser channels (chrome/edge/...) and the account profiles inside them, with the active one marked.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -382,6 +416,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_switch_account',
+    title: "Switch account",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Switch the active browser account (profile). The browser restarts on the new profile.',
     inputSchema: {
       type: 'object',
@@ -398,6 +434,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_sync_add',
+    title: "Add a sync rule",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Create a rule that mirrors tabs from one account into another.',
     inputSchema: {
       type: 'object',
@@ -416,6 +454,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_sync_list',
+    title: "List sync rules",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'List active tab sync rules.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -428,6 +468,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_sync_run',
+    title: "Run a full sync",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Immediately push all open tabs of the source account into the target account.',
     inputSchema: {
       type: 'object',
@@ -447,6 +489,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_game_detect',
+    title: "Detect a web game",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Detect whether the page hosts a web game and what it runs on: Canvas 2D, WebGL, WebGPU, and which engine (Phaser, Three.js, PixiJS, p5, Kaboom, Crafty). Reports canvas sizes, render context, renderer string and the game-like globals it can see.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -458,6 +502,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_game_state',
+    title: "Read game state",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Read the live state of a web game: frame rate statistics, entity collections and the numeric/string fields of the game objects it keeps on the window. Pass an expression to read anything the game exposes.',
     inputSchema: {
       type: 'object',
@@ -474,6 +520,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_game_control',
+    title: "Control the frame loop",
+    annotations: {"readOnlyHint":false,"destructiveHint":true,"idempotentHint":false,"openWorldHint":false},
     description: 'Control the game frame loop: pause it, resume it, or advance it a fixed number of frames while paused. Stepping frame by frame is how you pin down the exact moment a game goes wrong.',
     inputSchema: {
       type: 'object',
@@ -504,6 +552,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_game_input',
+    title: "Send game input",
+    annotations: {"readOnlyHint":false,"destructiveHint":false,"idempotentHint":false,"openWorldHint":false},
     description: 'Send pointer or keyboard input to a web game. Pointer events are dispatched at viewport coordinates so canvas games receive them, and keys can be repeated for movement.',
     inputSchema: {
       type: 'object',
@@ -527,6 +577,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_game_probe',
+    title: "Probe the canvas",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Sample a region of the game canvas and report its brightness, which tells you whether the game is actually rendering or has gone blank. Useful after a crash or a state change.',
     inputSchema: {
       type: 'object',
@@ -546,6 +598,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_perf_profile',
+    title: "Profile the page",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Profile the current page: navigation timings, paint timings, resource weights by type and the heaviest requests. Use it to find what is slowing a game or a heavy page down.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -593,6 +647,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_status',
+    title: "Show runtime status",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Report runtime status: active account, browser version, ad-blocking stats, tab counts.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -603,6 +659,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_adblock_stats',
+    title: "Show ad-blocking stats",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false},
     description: 'Report how many requests the ad blocker stopped and which rules fired.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
@@ -613,6 +671,8 @@ export function createServer(runtime) {
 
   server.tool({
     name: 'browser_speed_test',
+    title: "Measure network speed",
+    annotations: {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":true},
     description: 'Measure network latency, jitter and download throughput, plus current page performance metrics.',
     inputSchema: {
       type: 'object',

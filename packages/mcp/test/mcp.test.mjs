@@ -1,8 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
@@ -14,11 +13,17 @@ import {
   tomlString,
   readJsonSafe,
 } from '@agbrowser/mcp/installer';
+import { PROTOCOL_VERSION, SUPPORTED_VERSIONS, META_KEYS } from '@agbrowser/mcp/protocol';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SERVER = join(__dirname, '..', '..', 'mcp', 'src', 'server.js');
+const here = import.meta.dirname;
+const SERVER = join(here, '..', '..', 'mcp', 'src', 'server.js');
 
-/** Drive the MCP server over stdio and collect its responses. */
+/**
+ * Drive the MCP server over stdio and collect its responses.
+ *
+ * The 2026-07-28 revision has no handshake: each request declares its
+ * protocol version in `params._meta`.
+ */
 function mcpSession(requests) {
   const child = spawn(process.execPath, [SERVER], {
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -48,14 +53,22 @@ function mcpSession(requests) {
   });
 
   let nextId = 0;
-  const send = (method, params = {}) => new Promise((resolve, reject) => {
+  const send = (method, params = {}, { version = PROTOCOL_VERSION } = {}) => new Promise((resolve, reject) => {
     const id = ++nextId;
     const timer = setTimeout(() => reject(new Error(`timeout waiting for ${method}`)), 30_000);
     pending.push({
       id,
       resolve: (m) => { clearTimeout(timer); resolve(m); },
     });
-    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+    const payload = { jsonrpc: '2.0', id, method, params: { ...params } };
+    if (version !== null) {
+      payload.params._meta = {
+        [META_KEYS.PROTOCOL_VERSION]: version,
+        [META_KEYS.CLIENT_INFO]: { name: 'test', version: '1.0.0' },
+        [META_KEYS.CLIENT_CAPABILITIES]: {},
+      };
+    }
+    child.stdin.write(`${JSON.stringify(payload)}\n`);
   });
 
   const notify = (method, params = {}) => {
@@ -65,17 +78,59 @@ function mcpSession(requests) {
   return { child, send, notify, responses };
 }
 
-test('the MCP server completes the initialize handshake', async () => {
+test('server/discover reports the supported protocol version and identity', async () => {
+  const s = mcpSession();
+  try {
+    const res = await s.send('server/discover', {}, { version: null });
+    assert.ok(res.result, 'a result');
+    assert.equal(res.result.resultType, 'complete');
+    assert.deepEqual(res.result.supportedVersions, SUPPORTED_VERSIONS);
+    assert.equal(res.result.supportedVersions[0], '2026-07-28');
+    assert.equal(res.result._meta[META_KEYS.SERVER_INFO].name, 'agbrowser');
+    assert.ok(res.result.capabilities.tools, 'the tools capability is advertised');
+    assert.ok(res.result.instructions.includes('browser_open'));
+  } finally {
+    s.child.kill();
+  }
+});
+
+test('a request without a declared protocol version is rejected', async () => {
+  const s = mcpSession();
+  try {
+    const res = await s.send('tools/list', {}, { version: null });
+    assert.equal(res.error?.code, -32022);
+    assert.equal(res.error?.message, 'Unsupported protocol version');
+    assert.deepEqual(res.error?.data?.supported, SUPPORTED_VERSIONS);
+    assert.equal(res.error?.data?.requested, null);
+  } finally {
+    s.child.kill();
+  }
+});
+
+test('an unsupported protocol version is rejected with the supported list', async () => {
+  const s = mcpSession();
+  try {
+    const res = await s.send('tools/list', {}, { version: '1999-01-01' });
+    assert.equal(res.error?.code, -32022);
+    assert.equal(res.error?.data?.requested, '1999-01-01');
+    assert.ok(res.error?.data?.supported.includes('2026-07-28'));
+  } finally {
+    s.child.kill();
+  }
+});
+
+test('the legacy initialize handshake is gone', async () => {
   const s = mcpSession();
   try {
     const res = await s.send('initialize', {
       protocolVersion: '2025-06-18',
       capabilities: {},
       clientInfo: { name: 'test', version: '1.0.0' },
-    });
-    assert.equal(res.result.serverInfo.name, 'agbrowser');
-    assert.ok(res.result.protocolVersion);
-    assert.ok(res.result.instructions.includes('browser_open'));
+    }, { version: null });
+    assert.ok(res.error, 'initialize must not be served');
+    assert.equal(res.error.code, -32601);
+    // The message names the versions we do speak so a legacy client can act.
+    assert.ok(res.error.message.includes('2026-07-28'), res.error.message);
   } finally {
     s.child.kill();
   }
@@ -84,8 +139,6 @@ test('the MCP server completes the initialize handshake', async () => {
 test('the MCP server advertises the agent browser tools', async () => {
   const s = mcpSession();
   try {
-    await s.send('initialize', { protocolVersion: '2025-06-18', capabilities: {} });
-    s.notify('notifications/initialized');
     const res = await s.send('tools/list');
     const names = res.result.tools.map((t) => t.name);
 
@@ -94,6 +147,8 @@ test('the MCP server advertises the agent browser tools', async () => {
       'browser_read', 'browser_extract', 'browser_screenshot', 'browser_tabs',
       'browser_accounts', 'browser_switch_account', 'browser_sync_add',
       'browser_sync_list', 'browser_status', 'browser_adblock_stats', 'browser_speed_test',
+      'browser_game_detect', 'browser_game_state', 'browser_game_control',
+      'browser_game_input', 'browser_game_probe', 'browser_perf_profile',
     ]) {
       assert.ok(names.includes(expected), `missing tool: ${expected}`);
     }
@@ -108,10 +163,65 @@ test('the MCP server advertises the agent browser tools', async () => {
   }
 });
 
+test('every tool carries the 2026-07-28 behavioural annotations', async () => {
+  const s = mcpSession();
+  try {
+    const res = await s.send('tools/list');
+    for (const tool of res.result.tools) {
+      assert.ok(tool.title, `${tool.name} title`);
+      assert.ok(tool.annotations, `${tool.name} annotations`);
+      for (const hint of ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint']) {
+        assert.equal(typeof tool.annotations[hint], 'boolean',
+          `${tool.name}.${hint} must be a boolean`);
+      }
+    }
+
+    // A read-only tool must not claim to change anything.
+    const read = res.result.tools.find((t) => t.name === 'browser_snapshot');
+    assert.equal(read.annotations.readOnlyHint, true);
+    assert.equal(read.annotations.destructiveHint, false);
+
+    // A destructive tool must say so.
+    const destructive = res.result.tools.find((t) => t.name === 'browser_tabs');
+    assert.equal(destructive.annotations.destructiveHint, true);
+  } finally {
+    s.child.kill();
+  }
+});
+
+test('list results carry cache hints and a deterministic order', async () => {
+  const s = mcpSession();
+  try {
+    const first = await s.send('tools/list');
+    assert.equal(first.result.ttlMs, 3_600_000);
+    assert.equal(first.result.cacheScope, 'public');
+
+    const second = await s.send('tools/list');
+    assert.deepEqual(
+      first.result.tools.map((t) => t.name),
+      second.result.tools.map((t) => t.name),
+      'the catalogue order must be stable so client caches stay valid',
+    );
+  } finally {
+    s.child.kill();
+  }
+});
+
+test('a tool result carries the server identity in _meta', async () => {
+  const s = mcpSession();
+  try {
+    const res = await s.send('tools/call', { name: 'browser_status', arguments: {} });
+    assert.equal(res.result.resultType, 'complete');
+    assert.equal(res.result._meta[META_KEYS.SERVER_INFO].name, 'agbrowser');
+    assert.ok(res.result.content[0].text.length > 0);
+  } finally {
+    s.child.kill();
+  }
+});
+
 test('the MCP server reports an unknown tool as an error result', async () => {
   const s = mcpSession();
   try {
-    await s.send('initialize', { protocolVersion: '2025-06-18', capabilities: {} });
     const res = await s.send('tools/call', { name: 'does_not_exist', arguments: {} });
     assert.equal(res.result.isError, true);
   } finally {

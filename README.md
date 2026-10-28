@@ -36,7 +36,17 @@ agbrowser 的应对是**接管而非绕过**：它为每个渠道建一个受管
 
 浏览器读写的仍是它自己原来那批文件，所以 Cookie、登录态、密码管理器、收藏夹、厂商同步全部照常工作。**没有任何数据被复制、导出或解密**，真实 profile 也不会被修改。
 
-实测（Edge 默认 profile）：`Bookmarks` 1.4 MB、`Login Data` 983 KB、`Preferences` 390 KB 全部原样可见。
+这条承诺有可执行的验证：
+
+```bash
+npm run verify:inheritance
+```
+
+脚本会对每个检测到的渠道启动真实浏览器，逐项证明：受管目录里的 profile **确实是指向真实 profile 的联接**（`realpath` 相同，所以浏览器是直接写原文件，不是副本）；浏览器通过受管路径读到的**书签条目数与链接数**与真实文件一致；密码数据库能用继承来的 `Local State` 密钥打开；受管目录里**没有产生任何凭据导出文件**。
+
+实测（Edge 默认 profile）：`Bookmarks` 1.4 MB、`Login Data` 983 KB、`Preferences` 390 KB 全部原样可见，1913 个书签条目与 1440 条链接通过联接被浏览器完整读到。
+
+> 关于「真实 profile 会不会被改」：Chromium 启动时会重写自己那几个 SQLite 存储（迁移、写 WAL），这是内核自身的行为——**完全不经 agbrowser 的原生 Chrome 也一样会改**。agbrowser 自己不解密、不重加密、不复制、不导出任何凭据。
 
 ---
 
@@ -72,7 +82,22 @@ https://github.com/neko233-com/agbrowser/releases/latest/download/agbrowser-0.1.
 
 ### 1. Agent 优先的 MCP 服务
 
-19 个 `browser_*` 工具，遵循其它 agent browser 的命名约定，现有 skill 与 prompt 可直接复用。
+30 个 `browser_*` 工具，遵循其它 agent browser 的命名约定，现有 skill 与 prompt 可直接复用。
+
+**协议**：实现 MCP **2026-07-28** 规范（当前版本）。该版本是 **stateless 核心**——没有 `initialize` 握手，每个请求自带协议版本：
+
+```jsonc
+// 请求
+{ "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+  "params": { "name": "browser_open", "arguments": { "url": "..." },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "client", "version": "1.0" },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    } } }
+```
+
+同时提供 `server/discover` 供客户端一次性拿到支持的版本与能力；版本不匹配时返回 `-32022` 并列出可用版本。工具目录带 `title` 与 `annotations`（`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`），客户端可据此决定是否需要用户确认。列表结果带 `ttlMs` 与 `cacheScope`，客户端可以缓存目录。
 
 关键设计是**紧凑快照**：不用返回原始 HTML，而是返回 a11y 树里的 `@e1`、`@e2` 引用。
 
@@ -85,7 +110,7 @@ browser_open https://example.com
 
 一次典型的页面读取从数万 token 降到几百。Agent 后续用 `@e3` 直接操作，页面变化后重新快照即可。
 
-可用工具：`browser_open` `browser_snapshot` `browser_read` `browser_extract` `browser_click` `browser_fill` `browser_type` `browser_press` `browser_scroll` `browser_hover` `browser_wait` `browser_screenshot` `browser_back` `browser_forward` `browser_reload` `browser_tabs` `browser_accounts` `browser_switch_account` `browser_sync_add` `browser_sync_list` `browser_sync_run` `browser_status` `browser_adblock_stats` `browser_speed_test`
+可用工具：`browser_open` `browser_snapshot` `browser_read` `browser_extract` `browser_click` `browser_fill` `browser_type` `browser_press` `browser_scroll` `browser_hover` `browser_wait` `browser_screenshot` `browser_back` `browser_forward` `browser_reload` `browser_tabs` `browser_accounts` `browser_switch_account` `browser_sync_add` `browser_sync_list` `browser_sync_run` `browser_game_detect` `browser_game_state` `browser_game_control` `browser_game_input` `browser_game_probe` `browser_perf_profile` `browser_status` `browser_adblock_stats` `browser_speed_test`
 
 ### 2. 网络层广告拦截
 
@@ -109,6 +134,8 @@ browser_open https://example.com
 agb sync add chrome/Default edge/Default   # 建立镜像规则
 agb sync run chrome/Default edge/Default   # 立即推送当前所有标签
 ```
+
+同步不是纸面功能。`packages/core/test/sync-live.test.mjs` 会**同时启动两个真实的 Chromium 实例**，验证源账号开标签时目标账号真的开出了对应页面、关标签时目标端真的关闭、全量同步真的推了三个标签过去。镜像出来的标签在 store 里带 `origin: sync:<rule>`，与用户手动打开的标签区分得开。
 
 ### 4. 让网站对 Agent 与对人表现一致
 
@@ -235,7 +262,7 @@ Windows 2024-02 起的 `UCPD.sys`（User Choice Protection Driver）会拦截所
 ```
 packages/
   core/       零依赖 CDP 客户端、启动器、账号/渠道、广告拦截、标签同步、纵向标签、反检测
-  mcp/        MCP 协议服务器、19 个工具、一键安装器
+  mcp/        MCP 协议服务器（2026-07-28 规范）、30 个工具、一键安装器
   cli/        agb 命令行
   console/    本地控制面板（HTTP + 单页 UI）
 extensions/
@@ -252,11 +279,15 @@ extensions/
 ## 开发
 
 ```bash
-npm test           # 单元 + 集成 + 端到端 + 验收
-npm run test:unit  # 纯单元测试
-npm run test:e2e   # 真实浏览器端到端测试
-npm run test:ext   # 内置插件加载测试
-npm run icons      # 重新生成插件图标
+npm test                 # 全部测试：单元 + 端到端 + 插件 + 游戏 + 双实例同步 + 验收
+npm run test:unit        # 纯单元测试
+npm run test:e2e         # 真实浏览器端到端测试
+npm run test:ext         # 内置插件加载测试
+npm run test:game        # Web 游戏模块测试
+npm run test:sync-live   # 两个真实浏览器实例之间的标签同步
+npm run test:acceptance  # 按客户端的方式驱动 MCP 服务
+npm run verify:inheritance  # 证明账号数据被真正继承且未被导出
+npm run icons            # 重新生成插件图标
 ```
 
 ## License
