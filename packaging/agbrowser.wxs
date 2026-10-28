@@ -123,20 +123,22 @@
       </Component>
 
       <Component Id="UrlAssociationComponent" Guid="7B1E4D09-6C53-4A82-B1F7-3D90E8A25C6B">
-        <RegistryKey Root="HKCU" Key="Software\Classes\http">
-          <RegistryValue Id="HttpUrlProtocol" Name="URL Protocol" Type="string" Value="" />
-          <RegistryKey Key="shell\open\command">
-            <RegistryValue Id="HttpCommand" Name="Default" Type="string"
-                           Value="&quot;[INSTALLFOLDER]agbrowser.exe&quot; --single-argument %1" />
-          </RegistryKey>
-        </RegistryKey>
-        <RegistryKey Root="HKCU" Key="Software\Classes\https">
-          <RegistryValue Id="HttpsUrlProtocol" Name="URL Protocol" Type="string" Value="" />
-          <RegistryKey Key="shell\open\command">
-            <RegistryValue Id="HttpsCommand" Name="Default" Type="string"
-                           Value="&quot;[INSTALLFOLDER]agbrowser.exe&quot; --single-argument %1" />
-          </RegistryKey>
-        </RegistryKey>
+        <!--
+          Only the ProgID and the Capabilities entry are registered.
+
+          A legacy handler under HKCU\Software\Classes\http gives the scheme
+          more than one candidate while UserChoice still points elsewhere,
+          and the shell then asks which browser to use every time a link is
+          opened. The entries below therefore only clean up a handler an
+          earlier install may have left behind.
+        -->
+        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\http\shell\open\command" Action="removeOnUninstall" />
+        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\https\shell\open\command" Action="removeOnUninstall" />
+        <RegistryValue Root="HKCU" Key="Software\agbrowser"
+                       Name="LegacyAssociationsRemoved"
+                       Type="string"
+                       Value="1"
+                       KeyPath="yes" />
       </Component>
     </ComponentGroup>
 

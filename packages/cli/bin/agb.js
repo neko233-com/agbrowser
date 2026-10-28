@@ -339,27 +339,30 @@ async function cmdDefault(args) {
     const launcher = resolveLauncher();
     if (!launcher) {
       fail('找不到可注册的启动器，无法设为默认。');
+      info('提示: npm install -g @agbrowser/cli 后重试');
       return 1;
     }
+
     registerBrowserApp({ command: launcher });
-    ok('已注册到 Windows（现在可在「默认网页浏览器」列表中看到 agbrowser）');
+    ok('已注册（现在可在「默认网页浏览器」列表中看到 agbrowser）');
 
     const result = setAsDefaultBrowser();
     if (result.ok) {
       ok('已设为默认浏览器');
       info(`此前默认: ${result.previous?.progId ?? '(无)'}`);
+      info('之后所有链接都会直接由 agbrowser 打开，不会再询问。');
       return 0;
     }
 
     warn('无法自动写入默认浏览器设置。');
     info(result.reason ?? '');
     info('');
-    info('Windows 从 2024 年 2 月起启用了 UserChoice 保护驱动 (UCPD)，');
-    info('禁止任何程序自行修改用户的默认浏览器。这一层需要你手动确认一次：');
+    info('这一步只需你做一次，之后不会再有任何弹窗：');
     info('');
     info('  设置 → 应用 → 默认网页浏览器 → 选择 agbrowser');
     info('');
-    info('选择一次后，Chrome 与 Edge 的链接都会由 agbrowser 接管。');
+    info('选定之后，Chrome 与 Edge 的链接都会直接由 agbrowser 打开，');
+    info('Windows 会记住这个选择，不再每次询问。');
     return 0;
   }
 

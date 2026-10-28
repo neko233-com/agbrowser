@@ -156,13 +156,14 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
     reg(['add', `${appRoot}\\SupportedTypes\\${scheme}`, '/ve', '/t', 'REG_SZ', '/d', `${scheme}.txt`, '/f']);
   }
 
-  // Per-scheme URL associations.
-  for (const scheme of SCHEMES) {
-    const assoc = `${classesRoot}\\${scheme}`;
-    reg(['add', assoc, '/v', 'URL Protocol', '/t', 'REG_SZ', '/d', '', '/f']);
-    reg(['add', `${assoc}\\shell\\open\\command`, '/ve', '/t', 'REG_SZ', '/d', cmdValue, '/f']);
-    reg(['add', `${assoc}\\shell\\open\\command`, '/v', 'DelegateExecute', '/t', 'REG_SZ', '/d', '', '/f']);
-  }
+  // Deliberately no legacy handler under HKCU\Software\Classes\http.
+  //
+  // Writing a shell handler there gives the scheme more than one candidate
+  // handler while UserChoice still points somewhere else, and the shell then
+  // asks the user to pick one every single time a link is opened. Only the
+  // ProgID and the Capabilities entry are registered, so the choice is made
+  // once in Settings and Windows remembers it from then on.
+  removeLegacyAssociations();
 
   // Capabilities: the entry Windows reads to decide what the app can open.
   const caps = `${appRoot}\\Capabilities`;
@@ -173,6 +174,20 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
   }
 
   return { progId: PROG_ID, command: winPath };
+}
+
+/**
+ * Remove any legacy per-scheme handler a previous install left behind.
+ *
+ * These entries are what made the shell prompt on every link, so they are
+ * cleaned up whenever the app is registered.
+ */
+export function removeLegacyAssociations() {
+  for (const scheme of SCHEMES) {
+    reg(['delete', `HKCU\\Software\\Classes\\${scheme}\\shell\\open\\command`, '/f'],
+      { allowFailure: true });
+  }
+  return true;
 }
 
 /**
@@ -242,6 +257,9 @@ export function restoreDefaultBrowser(progId) {
 export function unregisterBrowserApp() {
   reg(['delete', 'HKCU\\Software\\Classes\\AgbrowserHTML', '/f'], { allowFailure: true });
   reg(['delete', 'HKCU\\Software\\Classes\\Applications\\agbrowser.exe', '/f'], { allowFailure: true });
+  // Legacy handlers must go too, or the shell keeps asking which browser to
+  // use even though agbrowser is gone.
+  removeLegacyAssociations();
   return true;
 }
 

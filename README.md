@@ -214,13 +214,19 @@ cd packages/launcher && go run ./icon .
 agb default set
 ```
 
-这会注册 `AgbrowserHTML` ProgID（应用列表、「打开方式」菜单立即可见）。
+这会注册 `AgbrowserHTML` ProgID，应用列表与「打开方式」菜单立即可见。
 
-**关于自动写入默认项**：Windows 从 2024 年 2 月的累积更新起引入了 `UCPD.sys`（User Choice Protection Driver），它会拦截所有程序对 `UserChoice` 键的写入——即使该键当前用户拥有完全控制权限。agbrowser 不会去禁用系统驱动（那是修改系统安全配置，且需要重启），而是检测它的状态并给出准确指引：
+**关于「每次都弹确认框」**：agbrowser **只注册 ProgID 和 Capabilities，绝不写 `HKCU\Software\Classes\http\shell\open\command`** 这类传统关联。原因很实际——写传统关联会让 http/https 协议同时存在多个候选处理器，而 UserChoice 仍指向别的浏览器，此时 Windows 每点一次链接就问一次「用哪个打开」。agbrowser 注册时会主动清理这类遗留项，安装包也会在卸载时移除它们。
+
+结果是：**选择一次，之后永远不再询问。**
+
+Windows 2024-02 起的 `UCPD.sys`（User Choice Protection Driver）会拦截所有程序对 UserChoice 键的写入，因此程序无法替你完成最后那一步选择——**这一步只需要你做一次**：
 
 > 设置 → 应用 → 默认网页浏览器 → 选择 agbrowser
 
-选择一次即可，Chrome 与 Edge 的链接都会被 agbrowser 接管。`agb default restore` 可还原。
+选定之后 Windows 会自己记住，Chrome 与 Edge 的链接都由 agbrowser 直接打开，全程无弹窗。agbrowser 不会去禁用系统驱动（那是修改系统安全配置且需重启）。
+
+`agb default restore` 可还原原来的默认浏览器。
 
 ---
 
