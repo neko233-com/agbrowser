@@ -15,12 +15,24 @@ packages/launcher/agbrowser.exe
 *.db-shm
 agbrowser-data/
 profiles/
+*.crdownload
 
 # Editor / IDE
 .vscode/
 .idea/
+.vs/
 *.swp
+*.suo
+*.user
 
 # OS
 Thumbs.db
 desktop.ini
+# .NET build output
+**/bin/
+**/obj/
+**/TestResults/
+*.wixpdb
+
+# WiX extension cache
+.wix/

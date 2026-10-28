@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -186,6 +186,7 @@ test('the vertical tab preference is written into a profile', () => {
     assert.equal(result.changed, true);
     const prefs = readPreferences(dir);
     assert.equal(prefs.vertical_tabs.enabled, true);
+    assert.equal(prefs.vertical_tabs.collapsed_state, true);
     assert.equal(prefs.vertical_tabs.uncollapsed_width, VERTICAL_TABS_PREF.uncollapsed_width);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -201,4 +202,15 @@ test('enabling vertical tabs twice is idempotent', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+
+test('invalid browser preferences are never overwritten', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'agb-prof-'));
+  try {
+    const file = join(dir, 'Preferences');
+    writeFileSync(file, '{bad');
+    assert.throws(() => enableVerticalTabs(dir), /Cannot safely read/);
+    assert.equal(readFileSync(file, 'utf8'), '{bad');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });

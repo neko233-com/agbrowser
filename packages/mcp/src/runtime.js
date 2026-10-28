@@ -135,6 +135,10 @@ export class Runtime extends EventEmitter {
       defaultUserDataDirs: [channel.userDataDir],
     });
 
+    if (managed.managed && !managed.ok) {
+      throw new Error(`Cannot prepare managed browser profile: ${managed.reason}`);
+    }
+
     // Prepare the native profile: enable the vertical tab strip in place.
     // The browser's own password manager, bookmarks and sync stay untouched.
     prepareProfile({
@@ -148,6 +152,8 @@ export class Runtime extends EventEmitter {
       accountId: account.id,
       userDataDir: managed.userDataDir,
       headless: this.headless,
+      verticalTabs: this.verticalTabs,
+      adblock: this.adblocker.enabled,
       loadExtensions: this.loadExtensions,
       extensionPaths: this.extensionPaths,
       extraFlags: [

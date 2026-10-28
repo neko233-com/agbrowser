@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "agbrowser Edge 收藏同步",
+  "version": "0.1.0",
+  "description": "通过本机连接在 Edge 与 agbrowser 之间同步收藏。",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx1pa8qrePMMUE5m+3oihSMmuM/1nwRQSJGQ90tmtYsAV8000SMo1ia2Mh6YqtI5rLsf7j4pCoTaZysx5GwGzZALy1La40vl8OsC9OH4JKrmJT5bw0iUZco5SOg/E8kNoo/97sq8KUnQtNgN/HPIOlH9pnxBFDlmyT3NKWL3DSNzRTNfTF7/xXzcD0AUgS2QC0reh5dIE+N0hM5CLM/23W1ShXL7CRj+GthHgGIezjqwm+z9GYN/BcQQRVDN9ZSSdVPYuO+c5crwSaY5vlD7MXYiE1HPC6ePwgyY0Y0h7TKM1eliUEJsu+V+kv9E4l2+kXCf+Ng4HQmVc79MM8GYPHQIDAQAB",
+  "permissions": ["bookmarks", "nativeMessaging", "alarms"],
+  "background": { "service_worker": "service-worker.js" }
+}

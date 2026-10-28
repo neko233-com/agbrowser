@@ -1,41 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  agbrowser installer.
-
-  The package is intentionally small: it ships the native launcher and the
-  icon set and nothing else. The browser engine is the Chromium build already
-  installed on the machine, and the agent runtime is plain JavaScript that the
-  CLI resolves at run time, so there is no bundled engine to inflate the
-  download.
-
-  The MSI targets the x86 platform. That is the most compatible choice: a
-  32-bit package installs on both 32-bit and 64-bit Windows and runs
-  correctly under WOW64.
--->
+<!-- Per-user installer for the self-contained Windows desktop application. -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
-  <Package Name="agbrowser"
+  <Package Name="agbrowser Desktop"
            Manufacturer="agbrowser"
            Version="$(var.Version)"
-           UpgradeCode="7C0F2A64-9B1E-4E52-9E2D-5A3F1B8D6C40"
+           UpgradeCode="B354E2D2-C816-4961-8F6D-A5CEAB83A219"
            Scope="perUser"
            Compressed="yes">
 
     <SummaryInformation Description="agbrowser — agent-first Chromium browser" />
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of agbrowser is already installed." />
+    <!-- The old 0.1.0 uninstaller removes shared URL handlers. This desktop
+         product has a separate upgrade identity and never removes the old MSI. -->
     <MediaTemplate EmbedCab="yes" />
 
     <Property Id="ARPNOREPAIR" Value="1" />
-
-    <!-- Detect a Node.js 24+ runtime. The browser works without it; only the
-         MCP server and the CLI need it. -->
-    <Property Id="NODEVERSION">
-      <RegistrySearch Id="NodeVersionSearch" Root="HKLM"
-                      Key="SOFTWARE\Node.js\Installations\24.0.0"
-                      Name="Version" Type="raw" />
-    </Property>
+    <!-- Earlier desktop builds carried the SDK's default 1.0.0 file version.
+         Always replace this product's owned files so migrating to the real
+         package version cannot skip the EXE before removing the old product. -->
+    <Property Id="REINSTALLMODE" Value="amus" />
 
     <Icon Id="agbrowserIcon" SourceFile="$(var.IconFile)" />
     <Property Id="ARPPRODUCTICON" Value="agbrowserIcon" />
@@ -45,21 +31,21 @@
          the directory tree below. -->
 
     <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="ApplicationProgramsFolder" Name="agbrowser" />
+      <Directory Id="ApplicationProgramsFolder" Name="agbrowser Desktop" />
     </StandardDirectory>
 
-    <!-- Per-user install location: %LOCALAPPDATA%\Programs\agbrowser -->
+    <!-- Separate location permits coexistence with the legacy launcher. -->
     <StandardDirectory Id="LocalAppDataFolder">
       <Directory Id="ProgramsFolder" Name="Programs">
-        <Directory Id="INSTALLFOLDER" Name="agbrowser">
+        <Directory Id="INSTALLFOLDER" Name="agbrowser-desktop">
           <Directory Id="InstallAssetsFolder" Name="assets" />
         </Directory>
       </Directory>
     </StandardDirectory>
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
-      <Component Id="LauncherComponent" Guid="3F1B9E42-6C58-4A7D-9E15-0B8D2C4F7A63">
+      <Component Id="LauncherComponent" Guid="4B3EA2D2-EC56-4CAA-BB1C-F3961A60FF9E">
         <File Id="AgbrowserExe"
-              Name="agbrowser.exe"
+              Name="AgBrowser.Desktop.exe"
               Source="$(var.LauncherExe)"
               KeyPath="yes">
           <Shortcut Id="StartMenuShortcut"
@@ -70,7 +56,7 @@
         </File>
         <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
         <RegistryValue Root="HKCU"
-                       Key="Software\agbrowser"
+                       Key="Software\agbrowser-desktop"
                        Name="InstallFolder"
                        Type="string"
                        Value="[INSTALLFOLDER]"
@@ -79,7 +65,7 @@
     </ComponentGroup>
 
     <ComponentGroup Id="AssetComponents" Directory="InstallAssetsFolder">
-      <Component Id="IconComponent" Guid="8B4D2F71-3E9A-4C16-A7D2-5F8E9C1B4D30">
+      <Component Id="IconComponent" Guid="BD59A974-F8E3-490E-882D-FCF46FD96BB6">
         <File Id="IconFileRef" Name="icon.ico" Source="$(var.IconFile)" KeyPath="yes" />
       </Component>
     </ComponentGroup>
@@ -93,53 +79,48 @@
          Protection Driver, so it cannot be written by an installer; the user
          makes that one confirmation in Settings. -->
     <ComponentGroup Id="BrowserRegistration" Directory="INSTALLFOLDER">
-      <Component Id="ProgIdComponent" Guid="5D2F8A13-7E64-4B90-9C31-8E6B0A4F2D57">
-        <RegistryKey Root="HKCU" Key="Software\Classes\AgbrowserHTML">
+      <Component Id="ProgIdComponent" Guid="C17263BC-1355-48D7-A7C0-3B0D6F64C694">
+        <RegistryKey Root="HKCU" Key="Software\Classes\Agbrowser.Document">
+          <RegistryValue Id="ProgIdDescription" Type="string" Value="agbrowser HTML Document" />
           <RegistryValue Id="ProgIdUrlProtocol" Name="URL Protocol" Type="string" Value="" />
-          <RegistryValue Id="ProgIdDefaultIcon" Name="DefaultIcon" Type="string" Value="[INSTALLFOLDER]agbrowser.exe,0" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Id="ProgIdDefaultIcon" Type="string" Value="&quot;[INSTALLFOLDER]AgBrowser.Desktop.exe&quot;,0" />
+          </RegistryKey>
           <RegistryKey Key="shell\open\command">
-            <RegistryValue Id="ProgIdCommand" Name="Default" Type="string"
-                           Value="&quot;[INSTALLFOLDER]agbrowser.exe&quot; --single-argument %1" />
+            <RegistryValue Id="ProgIdCommand" Type="string"
+                           Value="&quot;[INSTALLFOLDER]AgBrowser.Desktop.exe&quot; --single-argument &quot;%1&quot;" />
           </RegistryKey>
         </RegistryKey>
       </Component>
 
-      <Component Id="ApplicationComponent" Guid="3E9A6C24-1F58-4D73-8B02-5A7C4E1D9F38">
-        <RegistryKey Root="HKCU" Key="Software\Classes\Applications\agbrowser.exe">
+      <Component Id="RegisteredApplicationComponent" Guid="B23E161A-96A6-4B95-8336-D61FF831FD2C">
+        <RegistryValue Root="HKCU" Key="Software\RegisteredApplications" Name="agbrowser.desktop" Type="string"
+                       Value="Software\Classes\Applications\AgBrowser.Desktop.exe\Capabilities" KeyPath="yes" />
+      </Component>
+
+      <Component Id="ApplicationComponent" Guid="E78930B4-4085-4C6C-A920-D4EE912AB753">
+        <RegistryKey Root="HKCU" Key="Software\Classes\Applications\AgBrowser.Desktop.exe">
           <RegistryValue Id="AppPath" Name="Path" Type="string" Value="[INSTALLFOLDER]" />
           <RegistryKey Key="shell\open\command">
-            <RegistryValue Id="AppCommand" Name="Default" Type="string"
-                           Value="&quot;[INSTALLFOLDER]agbrowser.exe&quot; --single-argument %1" />
+            <RegistryValue Id="AppCommand" Type="string"
+                           Value="&quot;[INSTALLFOLDER]AgBrowser.Desktop.exe&quot; --single-argument &quot;%1&quot;" />
           </RegistryKey>
           <RegistryKey Key="Capabilities">
             <RegistryValue Id="AppName" Name="ApplicationName" Type="string" Value="agbrowser" />
             <RegistryValue Id="AppDescription" Name="ApplicationDescription" Type="string" Value="Agent-first Chromium browser" />
             <RegistryKey Key="URLAssociations">
-              <RegistryValue Id="AppAssocHttp" Name="http" Type="string" Value="AgbrowserHTML" />
-              <RegistryValue Id="AppAssocHttps" Name="https" Type="string" Value="AgbrowserHTML" />
+              <RegistryValue Id="AppAssocHttp" Name="http" Type="string" Value="Agbrowser.Document" />
+              <RegistryValue Id="AppAssocHttps" Name="https" Type="string" Value="Agbrowser.Document" />
+            </RegistryKey>
+            <RegistryKey Key="FileAssociations">
+              <RegistryValue Id="AppAssocHtm" Name=".htm" Type="string" Value="Agbrowser.Document" />
+              <RegistryValue Id="AppAssocHtml" Name=".html" Type="string" Value="Agbrowser.Document" />
             </RegistryKey>
           </RegistryKey>
         </RegistryKey>
       </Component>
 
-      <Component Id="UrlAssociationComponent" Guid="7B1E4D09-6C53-4A82-B1F7-3D90E8A25C6B">
-        <!--
-          Only the ProgID and the Capabilities entry are registered.
 
-          A legacy handler under HKCU\Software\Classes\http gives the scheme
-          more than one candidate while UserChoice still points elsewhere,
-          and the shell then asks which browser to use every time a link is
-          opened. The entries below therefore only clean up a handler an
-          earlier install may have left behind.
-        -->
-        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\http\shell\open\command" Action="removeOnUninstall" />
-        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\https\shell\open\command" Action="removeOnUninstall" />
-        <RegistryValue Root="HKCU" Key="Software\agbrowser"
-                       Name="LegacyAssociationsRemoved"
-                       Type="string"
-                       Value="1"
-                       KeyPath="yes" />
-      </Component>
     </ComponentGroup>
 
     <Feature Id="MainFeature" Title="agbrowser" Level="1" AllowAbsent="no">

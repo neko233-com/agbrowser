@@ -118,7 +118,7 @@ function currentUserSid() {
  * @param {string} [opts.icon] path to the icon
  * @param {string} [opts.displayName]
  */
-export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } = {}) {
+export function registerBrowserApp({ command, icon, displayName = 'agbrowser', classesRoot = 'HKCU\\Software\\Classes' } = {}) {
   if (!command) throw new Error('A launcher command path is required');
   if (!existsSync(command)) {
     throw new Error(`Launcher not found: ${command}`);
@@ -131,7 +131,6 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
     ? command.replace(/\//g, '\\')
     : command;
 
-  const classesRoot = 'HKCU\\Software\\Classes';
   const progRoot = `${classesRoot}\\${PROG_ID}`;
   const cmdValue = `"${winPath}" --single-argument %1`;
 
@@ -163,7 +162,7 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
   // asks the user to pick one every single time a link is opened. Only the
   // ProgID and the Capabilities entry are registered, so the choice is made
   // once in Settings and Windows remembers it from then on.
-  removeLegacyAssociations();
+  removeLegacyAssociations({ classesRoot });
 
   // Capabilities: the entry Windows reads to decide what the app can open.
   const caps = `${appRoot}\\Capabilities`;
@@ -182,9 +181,9 @@ export function registerBrowserApp({ command, icon, displayName = 'agbrowser' } 
  * These entries are what made the shell prompt on every link, so they are
  * cleaned up whenever the app is registered.
  */
-export function removeLegacyAssociations() {
+export function removeLegacyAssociations({ classesRoot = 'HKCU\\Software\\Classes' } = {}) {
   for (const scheme of SCHEMES) {
-    reg(['delete', `HKCU\\Software\\Classes\\${scheme}\\shell\\open\\command`, '/f'],
+    reg(['delete', `${classesRoot}\\${scheme}\\shell\\open\\command`, '/f'],
       { allowFailure: true });
   }
   return true;
@@ -254,12 +253,12 @@ export function restoreDefaultBrowser(progId) {
 }
 
 /** Remove the agbrowser registration entirely. */
-export function unregisterBrowserApp() {
-  reg(['delete', 'HKCU\\Software\\Classes\\AgbrowserHTML', '/f'], { allowFailure: true });
-  reg(['delete', 'HKCU\\Software\\Classes\\Applications\\agbrowser.exe', '/f'], { allowFailure: true });
+export function unregisterBrowserApp({ classesRoot = 'HKCU\\Software\\Classes' } = {}) {
+  reg(['delete', `${classesRoot}\\AgbrowserHTML`, '/f'], { allowFailure: true });
+  reg(['delete', `${classesRoot}\\Applications\\agbrowser.exe`, '/f'], { allowFailure: true });
   // Legacy handlers must go too, or the shell keeps asking which browser to
   // use even though agbrowser is gone.
-  removeLegacyAssociations();
+  removeLegacyAssociations({ classesRoot });
   return true;
 }
 

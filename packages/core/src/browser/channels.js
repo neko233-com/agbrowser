@@ -81,7 +81,7 @@ export function resolveChannelPaths(channel) {
     binary = channel.winBin?.() ?? null;
     userDataDir = channel.winUserData?.() ?? null;
     // Chrome may also be installed system-wide under Program Files.
-    if (!binary || !existsSync(binary)) {
+    if (channel.id === 'chrome' && (!binary || !existsSync(binary))) {
       const alt = join('C:\\Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe');
       if (existsSync(alt)) binary = alt;
     }

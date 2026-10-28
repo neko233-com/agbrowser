@@ -11,7 +11,7 @@
  * The only thing we write is a small, well-understood preference block that
  * turns on the native vertical tab strip.
  */
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -19,7 +19,7 @@ import { join } from 'node:path';
  * "Tab strip position -> Vertical". Verified empirically on Chrome 156.0.8078.48.
  */
 export const VERTICAL_TABS_PREF = {
-  collapsed_state: false,
+  collapsed_state: true,
   enabled: true,
   enabled_first_time: true,
   uncollapsed_width: 240,
@@ -52,7 +52,7 @@ export function writePreferences(profileDir, prefs) {
   const tmp = `${file}.agb.tmp`;
   writeFileSync(tmp, JSON.stringify(prefs), 'utf8');
   // Chrome tolerates a rename over the original.
-  copyFileSync(tmp, file);
+  renameSync(tmp, file);
   return file;
 }
 
@@ -66,12 +66,18 @@ export function enableVerticalTabs(profileDir) {
   if (!profileDir || !existsSync(profileDir)) {
     return { changed: false, previous: null };
   }
-  const prefs = readPreferences(profileDir);
+  const file = join(profileDir, 'Preferences');
+  let prefs = {};
+  if (existsSync(file)) {
+    try { prefs = JSON.parse(readFileSync(file, 'utf8')); }
+    catch { throw new Error(`Cannot safely read browser preferences: ${file}`); }
+    if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) throw new Error(`Invalid browser preferences: ${file}`);
+  }
   const previous = prefs.vertical_tabs ?? null;
   const desired = { ...VERTICAL_TABS_PREF, ...(previous ?? {}) };
   desired.enabled = true;
   desired.enabled_first_time = true;
-  if (typeof desired.collapsed_state !== 'boolean') desired.collapsed_state = false;
+  if (typeof desired.collapsed_state !== 'boolean') desired.collapsed_state = true;
   if (typeof desired.uncollapsed_width !== 'number') desired.uncollapsed_width = 240;
 
   if (previous && previous.enabled === desired.enabled &&

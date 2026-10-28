@@ -17,7 +17,6 @@ const ENABLE_FEATURES = [
 /** Features we explicitly want OFF (bloat, telemetry, background chatter). */
 const DISABLE_FEATURES = [
   'Translate',
-  'BackForwardCache',
   'AcceptCHFrame',
   'MediaRouter',
   'OptimizationHints',
@@ -26,12 +25,8 @@ const DISABLE_FEATURES = [
   'CalculateNativeWinOcclusion',
   'GlobalMediaControls',
   'PrivacySandboxSettings4',
-  'AutofillServerCommunication',
-  'CertificateTransparencyComponentUpdater',
   'DialMediaRouteProvider',
   'ExtensionManifestV2Disabled',
-  'EnhancedSafeBrowsing',
-  'ImprovedCookieControls',
   'AiMode',
 ];
 
@@ -48,28 +43,14 @@ export const SLIM_FLAGS = [
   '--disable-infobars',
   '--disable-notifications',
   '--disable-search-engine-choice-screen',
-  '--disable-sync',
   '--disable-background-networking',
-  '--disable-background-timer-throttling',
-  '--disable-backgrounding-occluded-windows',
-  '--disable-renderer-backgrounding',
-  '--disable-client-side-phishing-detection',
-  '--disable-component-update',
   '--disable-component-extensions-with-background-pages',
   '--disable-default-apps',
-  '--disable-hang-monitor',
-  '--disable-popup-blocking',
   '--disable-prompt-on-repost',
   '--disable-domain-reliability',
-  '--disable-breakpad',
-  '--disable-print-preview',
   '--disable-translate',
-  '--disable-features=OptimizationHints',
   '--metrics-recording-only',
   '--no-pings',
-  '--mute-audio',
-  '--password-store=basic',
-  '--use-mock-keychain',
   '--force-color-profile=srgb',
   // Keep navigator.webdriver false without relying on the injected script.
   '--disable-blink-features=AutomationControlled',
@@ -98,18 +79,8 @@ export const NO_AD_HOSTS = [
   'adnxs.com',
   'adsrvr.org',
   'crashlyticsreports-pa.googleapis.com',
-  'update.googleapis.com',
   'play.google-analytics.com',
   'app-measurement.com',
-  'firebaseinstallations.googleapis.com',
-  'safebrowsing.googleapis.com',
-  'content-autofill.googleapis.com',
-  'optimizationguide-pa.googleapis.com',
-  'suggestqueries.google.com',
-  'clientservices.googleapis.com',
-  'gvt1.com',
-  'gvt2.com',
-  'gvt3.com',
 ];
 
 /** Build the `--host-resolver-rules` value that black-holes ad hosts. */
@@ -140,6 +111,7 @@ export function buildLaunchFlags({
   loadExtensions = false,
   extensionPaths = [],
   verticalTabs = true,
+  adblock = true,
   extra = [],
 } = {}) {
   const flags = [...SLIM_FLAGS];
@@ -168,7 +140,7 @@ export function buildLaunchFlags({
   if (headless) flags.push('--headless=new');
 
   // Host-resolver black hole for ad endpoints.
-  flags.push(`--host-resolver-rules=${hostResolverRules()}`);
+  if (adblock) flags.push(`--host-resolver-rules=${hostResolverRules()}`);
 
   // Built-in extension pack.
   //

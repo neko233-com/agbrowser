@@ -43,7 +43,7 @@ async function main() {
   const env = process.env;
 
   const extensionPaths = findExtensionPack();
-  const loadExtensions = env.AGB_EXTENSIONS !== '0' && extensionPaths.length > 0;
+  const loadExtensions = env.AGB_EXTENSIONS === '1' && extensionPaths.length > 0;
 
   const runtime = new Runtime({
     dataDir: env.AGB_DATA_DIR || undefined,

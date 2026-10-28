@@ -70,7 +70,7 @@ test('a non-default user data dir is used as-is', () => {
   }
 });
 
-test('the managed root exposes the real profile files', () => {
+test('the managed root exposes the real profile files', (t) => {
   const { root, userDataDir } = makeFakeChannel();
   const previous = process.env.AGB_DATA_DIR;
   try {
@@ -81,6 +81,16 @@ test('the managed root exposes the real profile files', () => {
       profileDirs: ['Default'],
       defaultUserDataDirs: [userDataDir],
     });
+
+    // Windows may forbid file symlinks without Developer Mode or elevation.
+    // The launcher reports this as unavailable instead of silently using a
+    // different Local State file.
+    if (!result.ok && process.platform === 'win32' && /EPERM/i.test(result.reason ?? '')) {
+      assert.equal(result.managed, true);
+      t.skip('Windows file symlink privilege is unavailable; managed launch fails closed');
+      return;
+    }
+    assert.equal(result.ok, true, result.reason);
 
     const profileDir = join(result.userDataDir, 'Default');
     assert.ok(existsSync(profileDir), 'profile directory must be reachable');
@@ -94,9 +104,9 @@ test('the managed root exposes the real profile files', () => {
     const contents = readdirSync(profileDir);
     assert.ok(contents.includes('Preferences'));
   } finally {
+    cleanupManagedDir('chrome');
     if (previous === undefined) delete process.env.AGB_DATA_DIR;
     else process.env.AGB_DATA_DIR = previous;
-    cleanupManagedDir('chrome');
     rmSync(root, { recursive: true, force: true });
   }
 });
@@ -118,9 +128,9 @@ test('the real profile is never modified by linking', () => {
     const after = statSync(join(userDataDir, 'Default', 'Login Data')).mtimeMs;
     assert.equal(after, before, 'the real profile must not be touched');
   } finally {
+    cleanupManagedDir('chrome');
     if (previous === undefined) delete process.env.AGB_DATA_DIR;
     else process.env.AGB_DATA_DIR = previous;
-    cleanupManagedDir('chrome');
     rmSync(root, { recursive: true, force: true });
   }
 });

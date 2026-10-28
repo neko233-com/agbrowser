@@ -23,11 +23,11 @@ const version = "0.1.0"
 
 // channel describes one browser product.
 type channel struct {
-	ID        string
-	Label     string
-	Binary    string
-	UserData  string
-	Profiles  []string
+	ID       string
+	Label    string
+	Binary   string
+	UserData string
+	Profiles []string
 }
 
 var windowsChannels = []struct {
@@ -82,12 +82,8 @@ var adHosts = []string{
 	"googlesyndication.com", "pagead2.googlesyndication.com", "adservice.google.com",
 	"adservice.googleusercontent.com", "googleadservices.com", "www.googleadservices.com",
 	"amazon-adsystem.com", "c.amazon-adsystem.com", "adnxs.com", "adsrvr.org",
-	"crashlyticsreports-pa.googleapis.com", "update.googleapis.com",
+	"crashlyticsreports-pa.googleapis.com",
 	"play.google-analytics.com", "app-measurement.com",
-	"firebaseinstallations.googleapis.com", "safebrowsing.googleapis.com",
-	"content-autofill.googleapis.com", "optimizationguide-pa.googleapis.com",
-	"suggestqueries.google.com", "clientservices.googleapis.com",
-	"gvt1.com", "gvt2.com", "gvt3.com",
 }
 
 // slimFlags remove background services and features a browsing session does
@@ -100,27 +96,15 @@ var slimFlags = []string{
 	"--disable-infobars",
 	"--disable-notifications",
 	"--disable-search-engine-choice-screen",
-	"--disable-sync",
 	"--disable-background-networking",
-	"--disable-background-timer-throttling",
-	"--disable-backgrounding-occluded-windows",
-	"--disable-renderer-backgrounding",
-	"--disable-client-side-phishing-detection",
-	"--disable-component-update",
 	"--disable-component-extensions-with-background-pages",
 	"--disable-default-apps",
-	"--disable-hang-monitor",
-	"--disable-popup-blocking",
+	"--disable-extensions",
 	"--disable-prompt-on-repost",
 	"--disable-domain-reliability",
-	"--disable-breakpad",
-	"--disable-print-preview",
 	"--disable-translate",
 	"--metrics-recording-only",
 	"--no-pings",
-	"--mute-audio",
-	"--password-store=basic",
-	"--use-mock-keychain",
 	"--force-color-profile=srgb",
 	"--disable-blink-features=AutomationControlled",
 }
@@ -129,11 +113,11 @@ var slimFlags = []string{
 const enableFeatures = "VerticalTabs,TabStripUnification,NetworkService,NetworkServiceInProcess"
 
 // disableFeatures turns off bloat and telemetry.
-const disableFeatures = "Translate,BackForwardCache,AcceptCHFrame,MediaRouter," +
+const disableFeatures = "Translate,AcceptCHFrame,MediaRouter," +
 	"OptimizationHints,OptimizationGuideModelDownloading,InterestFeedContentSuggestions," +
 	"CalculateNativeWinOcclusion,GlobalMediaControls,PrivacySandboxSettings4," +
-	"AutofillServerCommunication,CertificateTransparencyComponentUpdater,DialMediaRouteProvider," +
-	"ExtensionManifestV2Disabled,EnhancedSafeBrowsing,ImprovedCookieControls,AiMode"
+	"DialMediaRouteProvider," +
+	"ExtensionManifestV2Disabled,AiMode"
 
 func main() {
 	if len(os.Args) > 1 {
@@ -304,13 +288,6 @@ func managedRoot() string {
 func prepareProfile(ch channel, profile string) (string, error) {
 	profileDir := filepath.Join(ch.UserData, profile)
 
-	// Enable the vertical tab strip in the real profile. This is a single
-	// well-understood preference and it is what Chrome itself writes when the
-	// user picks "Tab strip position -> Side".
-	if err := enableVerticalTabs(profileDir); err != nil {
-		return "", err
-	}
-
 	root := filepath.Join(managedRoot(), ch.ID)
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return "", err
@@ -321,9 +298,22 @@ func prepareProfile(ch channel, profile string) (string, error) {
 	// The profile directory itself.
 	linkDir(filepath.Join(root, profile), profileDir)
 
-	// Runtime files must never be shared with a running instance.
-	for _, name := range []string{"DevToolsActivePort", "lockfile", "SingletonLock", "SingletonCookie", "SingletonSocket"} {
-		_ = os.RemoveAll(filepath.Join(root, name))
+	// Fail closed if linking failed or an existing path points elsewhere.
+	for _, pair := range [][2]string{
+		{filepath.Join(root, "Local State"), filepath.Join(ch.UserData, "Local State")},
+		{filepath.Join(root, profile), profileDir},
+	} {
+		linked, linkErr := os.Stat(pair[0])
+		target, targetErr := os.Stat(pair[1])
+		if linkErr != nil || targetErr != nil || !os.SameFile(linked, target) {
+			return "", fmt.Errorf("cannot safely link browser data: %s", pair[0])
+		}
+	}
+	// Enable the vertical tab strip in the real profile. This is a single
+	// well-understood preference and it is what Chrome itself writes when the
+	// user picks "Tab strip position -> Side".
+	if err := enableVerticalTabs(profileDir); err != nil {
+		return "", err
 	}
 
 	return root, nil
@@ -353,7 +343,7 @@ func enableVerticalTabs(profileDir string) error {
 		vt = map[string]any{}
 	}
 	if enabled, _ := vt["enabled"].(bool); enabled {
-		if collapsed, _ := vt["collapsed_state"].(bool); !collapsed {
+		if _, ok := vt["collapsed_state"].(bool); ok {
 			if _, ok := vt["uncollapsed_width"]; ok {
 				return nil
 			}
@@ -362,7 +352,7 @@ func enableVerticalTabs(profileDir string) error {
 	vt["enabled"] = true
 	vt["enabled_first_time"] = true
 	if _, ok := vt["collapsed_state"]; !ok {
-		vt["collapsed_state"] = false
+		vt["collapsed_state"] = true
 	}
 	if _, ok := vt["uncollapsed_width"]; !ok {
 		vt["uncollapsed_width"] = 240

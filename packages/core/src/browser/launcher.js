@@ -115,6 +115,8 @@ export async function launchBrowser({
   port = 0,
   loadExtensions = false,
   extensionPaths = [],
+  verticalTabs = true,
+  adblock = true,
   extraFlags = [],
   timeout = 45_000,
 } = {}) {
@@ -146,6 +148,10 @@ export async function launchBrowser({
     port: port ?? 0,
     userDataDir: effectiveUserDataDir,
     profileDir,
+    loadExtensions,
+    extensionPaths,
+    verticalTabs,
+    adblock,
     extra: extraFlags,
   });
 
@@ -164,6 +170,7 @@ export async function launchBrowser({
   });
 
   let stderr = '';
+  child.on('error', error => { stderr += error.message; });
   child.stderr?.on('data', (chunk) => {
     stderr += chunk.toString();
     if (stderr.length > 8192) stderr = stderr.slice(-8192);
@@ -175,66 +182,89 @@ export async function launchBrowser({
     }
   });
 
-  // Port 0 lets the OS pick a free port; read it back from the DevTools file.
-  let actualPort = port;
-  if (!actualPort) {
-    actualPort = await readDevToolsPort(effectiveUserDataDir, timeout);
-  }
-
-  const endpoint = await waitForEndpoint(actualPort, { timeout });
-  const connection = new CdpConnection(endpoint.webSocketDebuggerUrl);
-  await connection.connect();
-
-  const session = new BrowserSession({
-    channelId,
-    accountId,
-    connection,
-    process: child,
-    userDataDir: effectiveUserDataDir,
-    ephemeral: isEphemeral,
-    port: actualPort,
-  });
-
-  await connection.send('Target.setDiscoverTargets', { discover: true });
-  await connection.send('Target.setAutoAttach', {
-    autoAttach: true,
-    waitForDebuggerOnStart: false,
-    flatten: true,
-  });
-
-  connection.on('Target.targetCreated', (params) => {
-    if (params.targetInfo?.type === 'page') {
-      session.targets.set(params.targetInfo.targetId, params.targetInfo);
-      session.emit('targetCreated', params.targetInfo);
+  let connection;
+  try {
+    // Port 0 lets the OS pick a free port; read it back from the DevTools file.
+    let actualPort = port;
+    if (!actualPort) {
+      actualPort = await readDevToolsPort(effectiveUserDataDir, timeout);
     }
-  });
-  connection.on('Target.targetDestroyed', (params) => {
-    session.targets.delete(params.targetId);
-    session.sessions.delete(params.targetId);
-    session.emit('targetDestroyed', params.targetId);
-  });
-  connection.on('Target.targetInfoChanged', (params) => {
-    if (params.targetInfo?.type === 'page') {
-      session.targets.set(params.targetInfo.targetId, params.targetInfo);
-      session.emit('targetUpdated', params.targetInfo);
+
+    const endpoint = await waitForEndpoint(actualPort, { timeout });
+    connection = new CdpConnection(endpoint.webSocketDebuggerUrl);
+    await connection.connect();
+
+    const session = new BrowserSession({
+      channelId,
+      accountId,
+      connection,
+      process: child,
+      userDataDir: effectiveUserDataDir,
+      ephemeral: isEphemeral,
+      port: actualPort,
+    });
+
+    await connection.send('Target.setDiscoverTargets', { discover: true });
+    await connection.send('Target.setAutoAttach', {
+      autoAttach: true,
+      waitForDebuggerOnStart: false,
+      flatten: true,
+    });
+
+    connection.on('Target.targetCreated', (params) => {
+      if (params.targetInfo?.type === 'page') {
+        session.targets.set(params.targetInfo.targetId, params.targetInfo);
+        session.emit('targetCreated', params.targetInfo);
+      }
+    });
+    connection.on('Target.targetDestroyed', (params) => {
+      session.targets.delete(params.targetId);
+      session.sessions.delete(params.targetId);
+      session.emit('targetDestroyed', params.targetId);
+    });
+    connection.on('Target.targetInfoChanged', (params) => {
+      if (params.targetInfo?.type === 'page') {
+        session.targets.set(params.targetInfo.targetId, params.targetInfo);
+        session.emit('targetUpdated', params.targetInfo);
+      }
+    });
+
+    await session.listPages();
+
+    // Load the built-in extension pack over CDP.
+    //
+    // Chrome 137+ removed the --load-extension command line switch because it
+    // was abused to sideload malware. The supported path is the
+    // Extensions.loadUnpacked CDP command, gated behind
+    // --enable-unsafe-extension-debugging (added above). Because we connect
+    // over a TCP debugging port rather than a pipe, navigator.webdriver stays
+    // false, so this approach does not weaken the hardening layer.
+    if (loadExtensions && extensionPaths.length > 0) {
+      session.extensionIds = await loadUnpackedExtensions(session, extensionPaths);
     }
-  });
 
-  await session.listPages();
-
-  // Load the built-in extension pack over CDP.
-  //
-  // Chrome 137+ removed the --load-extension command line switch because it
-  // was abused to sideload malware. The supported path is the
-  // Extensions.loadUnpacked CDP command, gated behind
-  // --enable-unsafe-extension-debugging (added above). Because we connect
-  // over a TCP debugging port rather than a pipe, navigator.webdriver stays
-  // false, so this approach does not weaken the hardening layer.
-  if (loadExtensions && extensionPaths.length > 0) {
-    session.extensionIds = await loadUnpackedExtensions(session, extensionPaths);
+    return session;
+  } catch (error) {
+    try { connection?.close(); } catch { /* best effort */ }
+    if (child.pid && child.exitCode === null && child.signalCode === null) {
+      await new Promise(resolveExit => {
+        let timer;
+        const done = () => { clearTimeout(timer); child.off('exit', done); child.off('error', done); resolveExit(); };
+        child.once('exit', done); child.once('error', done);
+        timer = setTimeout(done, 5000);
+        try { if (!child.kill()) done(); } catch { done(); }
+      });
+    }
+    const exited = !child.pid || child.exitCode !== null || child.signalCode !== null;
+    if (isEphemeral && exited) {
+      try { rmSync(effectiveUserDataDir, { recursive: true, force: true }); } catch { /* retained for later cleanup */ }
+    }
+    if (error && typeof error === 'object') {
+      error.agbrowserProcessId = child.pid ?? null;
+      error.agbrowserProcessStillRunning = !exited;
+    }
+    throw error;
   }
-
-  return session;
 }
 
 /**

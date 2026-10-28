@@ -5,8 +5,7 @@ commit, not through GitHub Actions.
 
 Rationale:
 
-- The Windows MSI is built with the WiX toolset and the native launcher with
-  Go. Both need a Windows toolchain, and the produced package is signed and
+- The Windows MSI is built with the WiX 5 and the .NET desktop application. Both need a Windows toolchain, and the produced package is signed and
   published by hand.
 - Every release is therefore a deliberate, reproducible step:
   `node packaging/build-msi.mjs` followed by `gh release create`.
@@ -15,11 +14,16 @@ Rationale:
 
 To cut a release:
 
-```bash
-npm test                       # the full suite must pass
-node packaging/build-msi.mjs   # produces build/agbrowser-<version>-x86.msi
-git tag -a v0.1.0 -m "agbrowser 0.1.0"
-git push origin v0.1.0
-gh release create v0.1.0 build/agbrowser-0.1.0-x86.msi \
-  --title "agbrowser 0.1.0" --notes "See the changelog."
+```powershell
+$version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+npm test
+npm run build:msi
+git tag -a "v$version" -m "agbrowser $version"
+git push origin "v$version"
+gh release create "v$version" "build/agbrowser-$version-x64.msi" `
+  --title "agbrowser $version" --notes "See the changelog."
 ```
+
+The desktop updater only offers a stable release when its tag is `vX.Y.Z`,
+the release contains `agbrowser-X.Y.Z-x64.msi`, and GitHub exposes that
+asset's SHA-256 digest. The older x86 launcher asset is not a desktop update.
